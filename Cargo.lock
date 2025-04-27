@@ -148,6 +148,7 @@ version = "0.1.0"
 dependencies = [
  "clap",
  "clickhouse",
+ "futures",
  "reqwest",
  "serde",
  "thiserror 2.0.12",

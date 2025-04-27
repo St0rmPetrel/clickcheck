@@ -4,6 +4,7 @@ use time::OffsetDateTime;
 
 #[derive(Row, Deserialize, Debug)]
 pub struct QueryLog {
+    pub normalized_query_hash: u64,
     pub query: String,
     #[serde(with = "clickhouse::serde::time::datetime")]
     pub max_event_time: OffsetDateTime,
@@ -45,28 +46,3 @@ impl QueryLog {
     }
 }
 
-#[derive(Debug)]
-pub struct WeightedQueryLog {
-    pub weight: u64,
-    pub log: QueryLog,
-}
-
-impl PartialEq for WeightedQueryLog {
-    fn eq(&self, other: &Self) -> bool {
-        self.weight == other.weight
-    }
-}
-
-impl Eq for WeightedQueryLog {}
-
-impl PartialOrd for WeightedQueryLog {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        self.weight.partial_cmp(&other.weight)
-    }
-}
-
-impl Ord for WeightedQueryLog {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        self.weight.cmp(&other.weight)
-    }
-}

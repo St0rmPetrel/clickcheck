@@ -12,7 +12,7 @@ async fn main() {
     let args = cli::CliArgs::parse();
 
     let client = client::Client::new(client::Config {
-        url: &args.url,
+        urls: &args.urls,
         user: &args.user,
         password: &args.password,
     });

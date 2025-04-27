@@ -1,12 +1,15 @@
 use crate::model::QueryLog;
 use clickhouse::{Client as ChClient, error::Error as ChError};
+use futures::future::try_join_all;
 use thiserror::Error;
 use tokio::sync::mpsc::{Sender, error::SendError};
 
-pub struct Client(ChClient);
+pub struct Client {
+    nodes: Vec<ChClient>,
+}
 
 pub struct Config<'a> {
-    pub url: &'a str,
+    pub urls: &'a [String],
     pub user: &'a str,
     pub password: &'a str,
 }
@@ -22,41 +25,62 @@ pub enum ClientError {
 
 impl Client {
     pub fn new(cfg: Config) -> Self {
-        let inner = ChClient::default()
-            .with_url(cfg.url)
-            .with_user(cfg.user)
-            .with_password(cfg.password)
-            .with_database("system");
+        let nodes = cfg
+            .urls
+            .iter()
+            .map(|url| {
+                ChClient::default()
+                    .with_url(url)
+                    .with_user(cfg.user)
+                    .with_password(cfg.password)
+                    .with_database("system")
+            })
+            .collect();
 
-        Self(inner)
+        Self { nodes }
     }
 
     pub async fn stream_query_logs(&self, sender: Sender<QueryLog>) -> Result<(), ClientError> {
-        let mut cursor = self
-            .0
-            .query(
-                r#"
-                SELECT
-                    any(query) AS query,
-                    max(event_time) AS max_event_time,
-                    min(event_time) AS min_event_time,
-                    sum(query_duration_ms) AS query_duration_ms,
-                    sum(read_rows) AS read_rows,
-                    sum(read_bytes) AS read_bytes,
-                    sum(memory_usage) AS memory_usage,
-                    sum(ProfileEvents['UserTimeMicroseconds']) AS user_time_us,
-                    sum(ProfileEvents['SystemTimeMicroseconds']) AS system_time_us
-                FROM query_log
-                WHERE type != 'QueryStart'
-                  AND query_kind = 'Select'
-                GROUP BY normalized_query_hash
-                "#,
-            )
-            .fetch::<QueryLog>()?;
+        let mut futures = Vec::new();
 
-        while let Some(row) = cursor.next().await? {
-            sender.send(row).await?
+        for node in &self.nodes {
+            let sender = sender.clone();
+            let node = node.clone();
+
+            let fut = async move {
+                let mut cursor = node
+                    .query(
+                        r#"
+                        SELECT
+                            normalized_query_hash,
+                            any(query) AS query,
+                            max(event_time) AS max_event_time,
+                            min(event_time) AS min_event_time,
+                            sum(query_duration_ms) AS query_duration_ms,
+                            sum(read_rows) AS read_rows,
+                            sum(read_bytes) AS read_bytes,
+                            sum(memory_usage) AS memory_usage,
+                            sum(ProfileEvents['UserTimeMicroseconds']) AS user_time_us,
+                            sum(ProfileEvents['SystemTimeMicroseconds']) AS system_time_us
+                        FROM query_log
+                        WHERE type != 'QueryStart'
+                          AND query_kind = 'Select'
+                        GROUP BY normalized_query_hash
+                        "#,
+                    )
+                    .fetch::<QueryLog>()?;
+
+                while let Some(row) = cursor.next().await? {
+                    sender.send(row).await?;
+                }
+
+                Ok::<(), ClientError>(())
+            };
+
+            futures.push(fut);
         }
+
+        try_join_all(futures).await?;
 
         Ok(())
     }

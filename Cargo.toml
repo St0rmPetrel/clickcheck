@@ -6,6 +6,7 @@ edition = "2024"
 [dependencies]
 clap = { version = "4.5.37", features = ["derive"] }
 clickhouse = { version = "0.13.2", features = ["native-tls", "time"] }
+futures = "0.3.31"
 reqwest = "0.12.15"
 serde = { version = "1.0.219", features = ["derive"] }
 thiserror = "2.0.12"

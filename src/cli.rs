@@ -8,9 +8,9 @@ use clap::Parser;
     about = "Analyze ClickHouse query_log and group similar queries by fingerprint"
 )]
 pub struct CliArgs {
-    /// ClickHouse server URL (e.g. http://localhost:8123)
-    #[arg(long)]
-    pub url: String,
+    /// ClickHouse node URL (can be specified multiple times)
+    #[arg(short = 'U', long = "url", required = true)]
+    pub urls: Vec<String>,
 
     /// ClickHouse username
     #[arg(short = 'u', long, default_value = "default")]
