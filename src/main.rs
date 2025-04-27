@@ -22,5 +22,6 @@ async fn main() {
     let analyzer_task = Analyzer::find_top_heavy_queries(rx);
     let stream_task = client.stream_query_logs(tx);
 
-    tokio::join!(stream_task, analyzer_task);
+    let (stream_result, _) = tokio::join!(stream_task, analyzer_task);
+    stream_result.expect("stream_query_logs failed");
 }

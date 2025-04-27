@@ -6,7 +6,7 @@ use tokio::sync::mpsc::Receiver;
 pub struct Analyzer;
 
 impl Analyzer {
-    pub async fn find_top_heavy_queries(mut receiver: Receiver<QueryLog<'_>>) {
+    pub async fn find_top_heavy_queries(mut receiver: Receiver<QueryLog>) {
         const TOP_N: usize = 5;
         let mut heap = BinaryHeap::with_capacity(TOP_N + 1);
         let mut total_weight: u64 = 0;

@@ -1,6 +1,7 @@
 use crate::model::QueryLog;
-use clickhouse::Client as ChClient;
-use tokio::sync::mpsc::Sender;
+use clickhouse::{Client as ChClient, error::Error as ChError};
+use thiserror::Error;
+use tokio::sync::mpsc::{Sender, error::SendError};
 
 pub struct Client(ChClient);
 
@@ -8,6 +9,15 @@ pub struct Config<'a> {
     pub url: &'a str,
     pub user: &'a str,
     pub password: &'a str,
+}
+
+#[derive(Debug, Error)]
+pub enum ClientError {
+    #[error("clickhouse query error: {0}")]
+    Query(#[from] ChError),
+
+    #[error("failed to send query log to analyzer: {0}")]
+    Send(#[from] SendError<QueryLog>),
 }
 
 impl Client {
@@ -21,7 +31,7 @@ impl Client {
         Self(inner)
     }
 
-    pub async fn stream_query_logs(&self, sender: Sender<QueryLog<'_>>) {
+    pub async fn stream_query_logs(&self, sender: Sender<QueryLog>) -> Result<(), ClientError> {
         let mut cursor = self
             .0
             .query(
@@ -42,13 +52,12 @@ impl Client {
                 GROUP BY normalized_query_hash
                 "#,
             )
-            .fetch::<QueryLog<'_>>()
-            .unwrap();
+            .fetch::<QueryLog>()?;
 
-        while let Some(row) = cursor.next().await.unwrap() {
-            if sender.send(row).await.is_err() {
-                break; // если получатель закрылся, выходим
-            }
+        while let Some(row) = cursor.next().await? {
+            sender.send(row).await?
         }
+
+        Ok(())
     }
 }

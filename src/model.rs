@@ -3,8 +3,8 @@ use serde::Deserialize;
 use time::OffsetDateTime;
 
 #[derive(Row, Deserialize, Debug)]
-pub struct QueryLog<'a> {
-    pub query: &'a str,
+pub struct QueryLog {
+    pub query: String,
     #[serde(with = "clickhouse::serde::time::datetime")]
     pub max_event_time: OffsetDateTime,
     #[serde(with = "clickhouse::serde::time::datetime")]
@@ -17,7 +17,7 @@ pub struct QueryLog<'a> {
     pub system_time_us: u64,
 }
 
-impl QueryLog<'_> {
+impl QueryLog {
     /// Целочисленный вес запроса, без `f64`:
     ///
     /// weight = cpu_time_us*10_000
@@ -46,26 +46,26 @@ impl QueryLog<'_> {
 }
 
 #[derive(Debug)]
-pub struct WeightedQueryLog<'a> {
+pub struct WeightedQueryLog {
     pub weight: u64,
-    pub log: QueryLog<'a>,
+    pub log: QueryLog,
 }
 
-impl<'a> PartialEq for WeightedQueryLog<'a> {
+impl PartialEq for WeightedQueryLog {
     fn eq(&self, other: &Self) -> bool {
         self.weight == other.weight
     }
 }
 
-impl<'a> Eq for WeightedQueryLog<'a> {}
+impl Eq for WeightedQueryLog {}
 
-impl<'a> PartialOrd for WeightedQueryLog<'a> {
+impl PartialOrd for WeightedQueryLog {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         self.weight.partial_cmp(&other.weight)
     }
 }
 
-impl<'a> Ord for WeightedQueryLog<'a> {
+impl Ord for WeightedQueryLog {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         self.weight.cmp(&other.weight)
     }
