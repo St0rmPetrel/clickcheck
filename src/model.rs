@@ -1,8 +1,9 @@
+use clap::ValueEnum;
 use clickhouse::Row;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use time::OffsetDateTime;
 
-#[derive(Row, Deserialize, Debug)]
+#[derive(Row, Serialize,Deserialize, Debug, Clone)]
 pub struct QueryLog {
     pub normalized_query_hash: u64,
     pub query: String,
@@ -46,3 +47,16 @@ impl QueryLog {
     }
 }
 
+#[derive(Serialize, Deserialize, Debug)]
+pub struct WeightedQueryLog {
+    pub weight: u64,
+    pub total_weight: u64,
+    pub query: QueryLog,
+}
+
+#[derive(Debug, Clone, ValueEnum)]
+pub enum OutputFormat {
+    Json,
+    Yaml,
+    Text,
+}

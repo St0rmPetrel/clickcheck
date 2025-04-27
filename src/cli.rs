@@ -1,4 +1,5 @@
 use clap::Parser;
+use crate::model::OutputFormat;
 
 /// Analyze ClickHouse query_log for inefficient queries.
 #[derive(Parser, Debug)]
@@ -19,4 +20,7 @@ pub struct CliArgs {
     /// ClickHouse password
     #[arg(short = 'p', long, default_value = "")]
     pub password: String,
+
+    #[clap(long, default_value = "text")]
+    pub out: OutputFormat,
 }
