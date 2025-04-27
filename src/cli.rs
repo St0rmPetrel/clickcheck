@@ -1,4 +1,4 @@
-use crate::model::OutputFormat;
+use crate::model::{OutputFormat, SortBy};
 use clap::Parser;
 
 /// Analyze ClickHouse query_log for inefficient queries.
@@ -27,4 +27,8 @@ pub struct CliArgs {
     /// number of output queries
     #[arg(long, default_value_t = 5)]
     pub limit: usize,
+
+    /// Field to sort queries by in top results, descending order.
+    #[clap(long, default_value = "weight")]
+    pub sort_by: SortBy,
 }

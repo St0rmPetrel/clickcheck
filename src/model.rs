@@ -3,7 +3,7 @@ use clickhouse::Row;
 use serde::{Deserialize, Serialize};
 use time::OffsetDateTime;
 
-#[derive(Row, Serialize,Deserialize, Debug, Clone)]
+#[derive(Row, Serialize, Deserialize, Debug, Clone)]
 pub struct QueryLog {
     pub normalized_query_hash: u64,
     pub query: String,
@@ -51,6 +51,7 @@ impl QueryLog {
 pub struct WeightedQueryLog {
     pub weight: u64,
     pub total_weight: u64,
+    pub cpu_time_us: u64,
     pub query: QueryLog,
 }
 
@@ -59,4 +60,16 @@ pub enum OutputFormat {
     Json,
     Yaml,
     Text,
+}
+
+#[derive(Debug, Clone, ValueEnum)]
+pub enum SortBy {
+    Weight,
+    CpuTime,
+    QueryDuration,
+    ReadRows,
+    ReadBytes,
+    MemoryUsage,
+    UserTime,
+    SystemTime,
 }

@@ -19,11 +19,11 @@ async fn main() {
 
     let (tx, rx) = mpsc::channel(128);
 
-    let analyzer_task = analyzer::top_queries_by_weight(rx, args.limit);
+    let analyzer_task = analyzer::top(rx, args.limit, args.sort_by);
     let stream_task = client.stream_query_logs(tx);
 
     let (stream_result, top_queries) = tokio::join!(stream_task, analyzer_task);
     stream_result.expect("stream_query_logs failed");
 
-    output::print_top(&top_queries, &args.out);
+    output::print_top(&top_queries, args.out);
 }

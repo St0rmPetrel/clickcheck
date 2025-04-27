@@ -1,6 +1,6 @@
 use crate::model::{OutputFormat as Format, WeightedQueryLog};
 
-pub fn print_top(queries: &[WeightedQueryLog], format: &Format) {
+pub fn print_top(queries: &[WeightedQueryLog], format: Format) {
     match format {
         Format::Json => print_top_json(queries),
         Format::Yaml => print_top_yaml(queries),
