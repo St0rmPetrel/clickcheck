@@ -1,5 +1,5 @@
-use clap::Parser;
 use crate::model::OutputFormat;
+use clap::Parser;
 
 /// Analyze ClickHouse query_log for inefficient queries.
 #[derive(Parser, Debug)]
@@ -23,4 +23,8 @@ pub struct CliArgs {
 
     #[clap(long, default_value = "text")]
     pub out: OutputFormat,
+
+    /// number of output queries
+    #[arg(long, default_value_t = 5)]
+    pub limit: usize,
 }

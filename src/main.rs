@@ -19,7 +19,7 @@ async fn main() {
 
     let (tx, rx) = mpsc::channel(128);
 
-    let analyzer_task = analyzer::top_queries_by_weight(rx, 5);
+    let analyzer_task = analyzer::top_queries_by_weight(rx, args.limit);
     let stream_task = client.stream_query_logs(tx);
 
     let (stream_result, top_queries) = tokio::join!(stream_task, analyzer_task);
