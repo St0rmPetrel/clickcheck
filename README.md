@@ -44,3 +44,13 @@ These features aim to make **ch-query-analyzer** not just a query log viewer, bu
 - DBAs — to optimize system performance and monitor resource usage
 - SREs — to detect anomalies, load spikes, and prepare alerts
 
+# TODO
+
+```
+ch-query-analyzer top queries --limit 10 --sort-by read_rows --group-by table --out json
+ch-query-analyzer top tables  --limit 10 --sort-by read_rows          --out text
+ch-query-analyzer top users   --limit 10 --sort-by cpu_time            --out yaml
+
+ch-query-analyzer unstable --threshold 0.7 --out json
+ch-query-analyzer burst   --window-secs 30 --out text
+```

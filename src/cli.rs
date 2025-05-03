@@ -1,8 +1,8 @@
 use crate::model::{OutputFormat, SortBy};
-use clap::Parser;
+use clap::{Parser, Subcommand};
 
 /// Analyze ClickHouse query_log for inefficient queries.
-#[derive(Parser, Debug)]
+#[derive(Parser)]
 #[command(
     name = "ch-query-analyzer",
     version,
@@ -24,11 +24,30 @@ pub struct CliArgs {
     #[clap(long, default_value = "text")]
     pub out: OutputFormat,
 
-    /// number of output queries
-    #[arg(long, default_value_t = 5)]
-    pub limit: usize,
+    /// Subcommands for different analysis modes
+    #[command(subcommand)]
+    pub command: Command,
+}
 
-    /// Field to sort queries by in top results, descending order.
-    #[clap(long, default_value = "weight")]
-    pub sort_by: SortBy,
+#[derive(Subcommand)]
+pub enum Command {
+    /// Top analysis: queries, tables or users
+    Top {
+        #[command(subcommand)]
+        command: TopCommand,
+
+        /// number of output queries
+        #[arg(long, default_value_t = 5)]
+        limit: usize,
+
+        /// Field to sort queries by in top results, descending order.
+        #[clap(long, default_value = "weight")]
+        sort_by: SortBy,
+    },
+}
+
+#[derive(Subcommand)]
+pub enum TopCommand {
+    /// Show top N heavy queries
+    Queries,
 }

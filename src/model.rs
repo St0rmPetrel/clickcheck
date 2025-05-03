@@ -73,3 +73,10 @@ pub enum SortBy {
     UserTime,
     SystemTime,
 }
+
+#[derive(Debug)]
+pub struct TopQueryRequest {
+    pub limit: usize,
+    pub sort_by: SortBy,
+    pub out: OutputFormat,
+}
