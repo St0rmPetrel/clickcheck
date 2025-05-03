@@ -37,6 +37,22 @@
 - **Colored and formatted output:** Use colors (e.g., red for slow queries) and align text into tables.
 - **Autocompletion and command history:** Improve usability with shell autocompletion and recent command history.
 
+### 📝 Add context/profile system for connection management
+
+Implement a kube-like context system to manage and switch between multiple ClickHouse cluster profiles.
+
+- [ ] Support multiple named profiles (`dev`, `prod`, etc.) stored in a config file (e.g. `~/.config/ch-query-analyzer/config.toml`).
+- [ ] Each profile can contain:
+  - Multiple `urls` for ClickHouse cluster nodes.
+  - `user` and `password` credentials.
+- [ ] Allow setting the current active context (e.g., `ch-query-analyzer context use dev`).
+- [ ] Add commands to list, view, and switch contexts:
+  - `context use <name>`
+  - `context current`
+  - `context list`
+- [ ] Optional: Add `login` command to create a new profile and optionally set it as current.
+- [ ] Ensure profile usage integrates cleanly with existing `CliArgs`.
+
 ---
 
 These features aim to make **ch-query-analyzer** not just a query log viewer, but a powerful tool for:
@@ -54,3 +70,4 @@ ch-query-analyzer top users   --limit 10 --sort-by cpu_time            --out yam
 ch-query-analyzer unstable --threshold 0.7 --out json
 ch-query-analyzer burst   --window-secs 30 --out text
 ```
+
