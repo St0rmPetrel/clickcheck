@@ -1,8 +1,12 @@
+mod filter;
+
 use crate::model::QueryLog;
 use clickhouse::{Client as ChClient, error::Error as ChError};
 use futures::future::try_join_all;
 use thiserror::Error;
 use tokio::sync::mpsc::{Sender, error::SendError};
+
+use filter::{QueryLogFilter};
 
 pub struct Client {
     nodes: Vec<ChClient>,
@@ -21,6 +25,9 @@ pub enum ClientError {
 
     #[error("failed to send query log to analyzer: {0}")]
     Send(#[from] SendError<QueryLog>),
+
+    #[error("failed to format datetime for query: {0}")]
+    Format(#[from] time::error::Format),
 }
 
 impl Client {
@@ -40,17 +47,22 @@ impl Client {
         Self { nodes }
     }
 
-    pub async fn stream_query_logs(&self, sender: Sender<QueryLog>) -> Result<(), ClientError> {
+    pub async fn stream_logs_by_fingerprint(
+        &self,
+        filter: QueryLogFilter,
+        sender: Sender<QueryLog>,
+    ) -> Result<(), ClientError> {
         let mut futures = Vec::new();
 
         for node in &self.nodes {
             let sender = sender.clone();
             let node = node.clone();
+            let filter = filter.clone();
 
             let fut = async move {
-                let mut cursor = node
-                    .query(
-                        r#"
+                let (where_clause, params) = filter.build_where();
+                let query = format!(
+                    r#"
                         SELECT
                             normalized_query_hash,
                             any(query) AS query,
@@ -65,10 +77,18 @@ impl Client {
                         FROM query_log
                         WHERE type != 'QueryStart'
                           AND query_kind = 'Select'
+                          {}
                         GROUP BY normalized_query_hash
                         "#,
-                    )
-                    .fetch::<QueryLog>()?;
+                    &where_clause,
+                );
+
+                let mut query = node.query(&query);
+                for param in params {
+                    query = query.bind(param.to_sql_string()?);
+                }
+
+                let mut cursor = query.fetch::<QueryLog>()?;
 
                 while let Some(row) = cursor.next().await? {
                     sender.send(row).await?;

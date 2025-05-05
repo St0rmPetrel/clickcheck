@@ -10,7 +10,8 @@ pub async fn handle_top_queries(
 ) -> Result<(), String> {
     let (tx, rx) = mpsc::channel(128);
     let analyzer_task = analyzer::top(rx, req.limit, req.sort_by);
-    let stream_task = client.stream_query_logs(tx);
+
+    let stream_task = client.stream_logs_by_fingerprint(req.filter.into(), tx);
 
     let (stream_result, top_queries) = tokio::join!(stream_task, analyzer_task);
 

@@ -3,6 +3,8 @@ use clickhouse::Row;
 use serde::{Deserialize, Serialize};
 use time::OffsetDateTime;
 
+use crate::cli;
+
 #[derive(Row, Serialize, Deserialize, Debug, Clone)]
 pub struct QueryLog {
     pub normalized_query_hash: u64,
@@ -75,8 +77,24 @@ pub enum SortBy {
 }
 
 #[derive(Debug)]
+pub struct Filter {
+    pub from: Option<OffsetDateTime>,
+    pub to: Option<OffsetDateTime>,
+}
+
+#[derive(Debug)]
 pub struct TopQueryRequest {
     pub limit: usize,
     pub sort_by: SortBy,
+    pub filter: Filter,
     pub out: OutputFormat,
+}
+
+impl From<cli::FilterArgs> for Filter {
+    fn from(args: cli::FilterArgs) -> Self {
+        Self {
+            from: args.from,
+            to: args.to,
+        }
+    }
 }

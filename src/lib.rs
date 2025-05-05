@@ -9,27 +9,24 @@ use clap::Parser;
 use cli::{CliArgs, Command, TopCommand};
 
 pub async fn run() -> Result<(), String> {
-    let args = CliArgs::parse();
+    let cli_args = CliArgs::parse();
 
     let client = client::Client::new(client::Config {
-        urls: &args.urls,
-        user: &args.user,
-        password: &args.password,
+        urls: &cli_args.urls,
+        user: &cli_args.user,
+        password: &cli_args.password,
     });
 
-    match args.command {
-        Command::Top {
-            command,
-            limit,
-            sort_by,
-        } => match command {
+    match cli_args.command {
+        Command::Top { command, args } => match command {
             TopCommand::Queries => {
                 command::handle_top_queries(
                     client,
                     model::TopQueryRequest {
-                        limit,
-                        sort_by,
-                        out: args.out,
+                        limit: args.limit,
+                        sort_by: args.sort_by,
+                        filter: args.filter.into(),
+                        out: cli_args.out,
                     },
                 )
                 .await?

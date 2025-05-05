@@ -1,5 +1,8 @@
 use crate::model::{OutputFormat, SortBy};
-use clap::{Parser, Subcommand};
+use clap::{Args, Parser, Subcommand};
+use time::format_description::well_known::Rfc3339;
+use time::macros::format_description;
+use time::{Date, OffsetDateTime, Time};
 
 /// Analyze ClickHouse query_log for inefficient queries.
 #[derive(Parser)]
@@ -36,13 +39,8 @@ pub enum Command {
         #[command(subcommand)]
         command: TopCommand,
 
-        /// number of output queries
-        #[arg(long, default_value_t = 5)]
-        limit: usize,
-
-        /// Field to sort queries by in top results, descending order.
-        #[clap(long, default_value = "weight")]
-        sort_by: SortBy,
+        #[clap(flatten)]
+        args: TopArgs,
     },
 }
 
@@ -50,4 +48,44 @@ pub enum Command {
 pub enum TopCommand {
     /// Show top N heavy queries
     Queries,
+}
+
+#[derive(Args)]
+pub struct TopArgs {
+    /// number of output queries
+    #[arg(long, default_value_t = 5)]
+    pub limit: usize,
+
+    /// Field to sort queries by in top results, descending order.
+    #[arg(long, default_value = "weight")]
+    pub sort_by: SortBy,
+
+    #[clap(flatten)]
+    pub filter: FilterArgs,
+}
+
+#[derive(Args)]
+pub struct FilterArgs {
+    /// Lower bound for event_time (inclusive). Supports RFC3339 or YYYY-MM-DD.
+    /// Examples: "2024-05-04T15:00:00Z", "2024-05-04"
+    #[arg(long,value_parser = parse_datetime)]
+    pub from: Option<OffsetDateTime>,
+    /// Upper bound for event_time (exclusive). Supports RFC3339 or YYYY-MM-DD.
+    /// Examples: "2024-05-04T15:00:00Z", "2024-05-04"
+    #[arg(long,value_parser = parse_datetime)]
+    pub to: Option<OffsetDateTime>,
+}
+
+fn parse_datetime(s: &str) -> Result<OffsetDateTime, String> {
+    if let Ok(dt) = OffsetDateTime::parse(s, &Rfc3339) {
+        return Ok(dt);
+    }
+
+    let date_format = format_description!("[year]-[month]-[day]");
+    if let Ok(date) = Date::parse(s, &date_format) {
+        let date = date.with_time(Time::MIDNIGHT).assume_utc();
+        return Ok(date);
+    }
+
+    Err("Invalid datetime format. Use RFC3339 (e.g. 2024-05-01T10:30:00Z) or YYYY-MM-DD.".into())
 }
