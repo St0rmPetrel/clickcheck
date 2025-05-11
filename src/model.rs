@@ -1,6 +1,7 @@
 use clap::ValueEnum;
 use clickhouse::Row;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use time::OffsetDateTime;
 
 use crate::cli;
@@ -97,4 +98,25 @@ impl From<cli::FilterArgs> for Filter {
             to: args.to,
         }
     }
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct ContextProfile {
+    pub user: String,
+    pub password: String,
+    pub urls: Vec<String>,
+}
+
+#[derive(Debug, Default, Serialize, Deserialize)]
+pub struct ContextConfig {
+    pub current: Option<String>,
+    pub profiles: HashMap<String, ContextProfile>,
+}
+
+#[derive(Debug)]
+pub struct ContextSetProfileRequest {
+    pub name: String,
+    pub user: String,
+    pub password: String,
+    pub urls: Vec<String>,
 }

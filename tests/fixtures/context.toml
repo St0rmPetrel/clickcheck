@@ -1,0 +1,17 @@
+current = "dev"
+
+[profiles.prod]
+user = "admin"
+password = "prodpass"
+urls = [
+    "https://ch1.prod",
+    "https://ch2.prod",
+]
+
+[profiles.dev]
+user = "default"
+password = ""
+urls = [
+    "ch-cev-1.com",
+    "ch-dev-2.com",
+]

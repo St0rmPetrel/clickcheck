@@ -1,10 +1,120 @@
-use crate::model::{OutputFormat as Format, WeightedQueryLog};
+use crate::model::{ContextProfile, OutputFormat as Format, WeightedQueryLog};
+use serde::Serialize;
 
 pub fn print_top(queries: &[WeightedQueryLog], format: Format) {
     match format {
         Format::Json => print_top_json(queries),
         Format::Yaml => print_top_yaml(queries),
         Format::Text => print_top_text(queries),
+    }
+}
+
+/// Print a list of context profile names in the chosen format.
+pub fn print_context_list(names: &[String], format: Format) {
+    match format {
+        Format::Text => {
+            for name in names {
+                println!("{name}");
+            }
+        }
+        Format::Json => {
+            #[derive(Serialize)]
+            struct ListWrapper<'a> {
+                profiles: &'a [String],
+            }
+            let wrapper = ListWrapper { profiles: names };
+            match serde_json::to_string_pretty(&wrapper) {
+                Ok(json) => println!("{json}"),
+                Err(e) => {
+                    eprintln!("Failed to serialize contexts to JSON: {e}");
+                }
+            }
+        }
+        Format::Yaml => {
+            #[derive(Serialize)]
+            struct ListWrapper<'a> {
+                profiles: &'a [String],
+            }
+            let wrapper = ListWrapper { profiles: names };
+            match serde_yaml::to_string(&wrapper) {
+                Ok(yaml) => println!("{yaml}"),
+                Err(e) => {
+                    eprintln!("Failed to serialize contexts to YAML: {e}");
+                }
+            }
+        }
+    }
+}
+
+/// Print the active (or default) context name, or a message if none is set.
+pub fn print_context_current(active: Option<&str>, format: Format) {
+    match format {
+        Format::Text => {
+            if let Some(name) = active {
+                println!("{name}");
+            } else {
+                println!("No active context set");
+            }
+        }
+        Format::Json => {
+            #[derive(Serialize)]
+            struct CurrentWrapper<'a> {
+                current: Option<&'a str>,
+            }
+            let wrapper = CurrentWrapper { current: active };
+            match serde_json::to_string_pretty(&wrapper) {
+                Ok(json) => println!("{json}"),
+                Err(e) => {
+                    eprintln!("Failed to serialize current context to JSON: {e}");
+                }
+            }
+        }
+        Format::Yaml => {
+            #[derive(Serialize)]
+            struct CurrentWrapper<'a> {
+                current: Option<&'a str>,
+            }
+            let wrapper = CurrentWrapper { current: active };
+            match serde_yaml::to_string(&wrapper) {
+                Ok(yaml) => println!("{yaml}"),
+                Err(e) => {
+                    eprintln!("Failed to serialize current context to YAML: {e}");
+                }
+            }
+        }
+    }
+}
+
+pub fn print_context_profile(profile: &ContextProfile, format: Format) {
+    match format {
+        Format::Text => {
+            println!("Profile:");
+            println!("  URLs: {}", profile.urls.join(", "));
+            println!("  User: {}", profile.user);
+            println!(
+                "  Password: {}",
+                if profile.password.is_empty() {
+                    "(empty)"
+                } else {
+                    &profile.password
+                }
+            );
+        }
+        Format::Json => {
+            // Serialize the ContextProfile itself
+            match serde_json::to_string_pretty(&profile) {
+                Ok(json) => println!("{json}"),
+                Err(e) => {
+                    eprintln!("Failed to serialize profile to JSON: {e}");
+                }
+            }
+        }
+        Format::Yaml => match serde_yaml::to_string(&profile) {
+            Ok(yaml) => println!("{yaml}"),
+            Err(e) => {
+                eprintln!("Failed to serialize profile to YAML: {e}");
+            }
+        },
     }
 }
 

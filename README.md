@@ -1,73 +1,56 @@
 # Roadmap for ch-query-analyzer
 
 ## ✅ Already Implemented
-- **Multi-node input** support (analyzing multiple ClickHouse nodes at once)
-- **Output in different formats:** Text, JSON, YAML
-- **Top N queries output:** Default sorted by weight
-- **Flexible sorting:** Top queries can be sorted by any field (e.g., `weight`, `cpu_time`, etc.)
+- **Multi-node input** support (analyze multiple ClickHouse nodes at once)
+- **Output formats**: Text, JSON, YAML
+- **Top N queries**: default sorted by weight
+- **Flexible sorting**: top queries can be sorted by any field (e.g. `weight`, `cpu_time`, etc.)
+- **Context/profile system**:
+  - Named profiles (`dev`, `prod`, …) stored in `~/.config/ch-query-analyzer/config.toml`
+  - Each profile has:
+    - Multiple `urls` for the cluster
+    - `user` and `password`
+  - `ch-query-analyzer context set profile <NAME> …` to create/update
+  - `ch-query-analyzer context set current <NAME>` to choose default
+  - `--context <NAME>` override per-command
 
-## 🚀 Planned and Suggested Features
+## 🚀 Planned & Suggested Features
 
 ### Smart Filters
-- **Filter by database or user:** Focus on queries from a particular database or user.
-- **Slow query filter:** Filter queries by minimum execution time (`query_duration_ms > X`).
-- **I/O or data volume filter:** Filter by `read_bytes`, `written_bytes`, etc., to find heavy I/O queries.
-- **Resource consumption filters:** Filter queries by memory usage, CPU time, and error types.
+- Filter by **database** or **user**
+- **Slow-query** filter: e.g. `query_duration_ms >= X`
+- **I/O-volume** filter: `read_bytes`, `written_bytes`
+- **Resource** filters: memory usage, CPU time, error codes
 
-### Specialized Query Weights
-- **CPU/Memory heavy score:** Create a weight based on CPU and memory usage.
-- **I/O heavy score:** Create a weight based on data read/written volumes.
-- **Custom composite scores:** Allow users to define custom scoring (e.g., `2x IO + 1x CPU + 0.5x Memory`).
+### Specialized Weights
+- **CPU/Memory score**: weight = f(cpu_time, memory_usage)
+- **I/O score**: weight = f(read_bytes, written_bytes)
+- **Custom composite**: user-defined formulas (e.g. `2×IO + 1×CPU + 0.5×Memory`)
 
-### Advanced Analysis
-- **Unstable (high-variance) queries:** Detect queries with high runtime variability.
-- **Query burst detection:** Identify sudden spikes in query frequency.
-- **Anomaly detection:** Automatically detect outlier queries based on statistical models.
+### Advanced Analysis Modes
+- **Unstable queries**: high-variance detection
+- **Burst detection**: spikes in query frequency
+- **Anomaly detection**: statistical outliers, unusual patterns
 
-### Real-time Monitoring and Dashboards
-- **Grafana/Prometheus integration:** Export metrics for real-time dashboards and alerts.
-- **Live streaming mode:** `tail -f`-like mode to watch incoming queries and highlight anomalies.
+### Beyond Query Logs
+- **Error frequency**: analyze `system.errors` to find the most common errors
+- **Storage growth**: inspect `system.parts` to find largest tables/partitions and predict growth
 
-### Export & Integration Features
-- **Prometheus metrics export:** Export aggregated results in a Prometheus-compatible format.
-- **CSV/JSON exports:** Save reports for external processing or dashboards.
+### Real-time & Integrations
+- **Live-stream mode**: `tail -f` style streaming with alerts on anomalies
+- **Prometheus export**: expose metrics for Grafana dashboards
+- **CSV/JSON reports**: for external analysis
 
-### CLI UX Enhancements
-- **Interactive mode:** A guided interactive CLI where users can select options step-by-step.
-- **Colored and formatted output:** Use colors (e.g., red for slow queries) and align text into tables.
-- **Autocompletion and command history:** Improve usability with shell autocompletion and recent command history.
+### CLI & UX
+- **Interactive wizard**: step-by-step mode for novices
+- **Colorized output**: highlight slow or error-prone queries
+- **Shell completion**: bash/zsh/fish autocomplete
+- **Subcommands**:
+  ```bash
+  ch-query-analyzer top queries --limit 10 --sort-by read_rows --group-by table --out json
+  ch-query-analyzer top tables  --limit 10 --sort-by read_rows          --out text
+  ch-query-analyzer top users   --limit 10 --sort-by cpu_time           --out yaml
 
-### 📝 Add context/profile system for connection management
-
-Implement a kube-like context system to manage and switch between multiple ClickHouse cluster profiles.
-
-- [ ] Support multiple named profiles (`dev`, `prod`, etc.) stored in a config file (e.g. `~/.config/ch-query-analyzer/config.toml`).
-- [ ] Each profile can contain:
-  - Multiple `urls` for ClickHouse cluster nodes.
-  - `user` and `password` credentials.
-- [ ] Allow setting the current active context (e.g., `ch-query-analyzer context use dev`).
-- [ ] Add commands to list, view, and switch contexts:
-  - `context use <name>`
-  - `context current`
-  - `context list`
-- [ ] Optional: Add `login` command to create a new profile and optionally set it as current.
-- [ ] Ensure profile usage integrates cleanly with existing `CliArgs`.
-
----
-
-These features aim to make **ch-query-analyzer** not just a query log viewer, but a powerful tool for:
-- Developers — to debug slow or unstable queries
-- DBAs — to optimize system performance and monitor resource usage
-- SREs — to detect anomalies, load spikes, and prepare alerts
-
-# TODO
-
-```
-ch-query-analyzer top queries --limit 10 --sort-by read_rows --group-by table --out json
-ch-query-analyzer top tables  --limit 10 --sort-by read_rows          --out text
-ch-query-analyzer top users   --limit 10 --sort-by cpu_time            --out yaml
-
-ch-query-analyzer unstable --threshold 0.7 --out json
-ch-query-analyzer burst   --window-secs 30 --out text
-```
-
+  ch-query-analyzer unstable --threshold 0.7 --out json
+  ch-query-analyzer burst   --window 30s     --out text
+  ```

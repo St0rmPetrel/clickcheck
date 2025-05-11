@@ -1,5 +1,7 @@
 use crate::analyzer;
+use crate::cli;
 use crate::client;
+use crate::context;
 use crate::model;
 use crate::output;
 use tokio::sync::mpsc;
@@ -18,6 +20,56 @@ pub async fn handle_top_queries(
     stream_result.map_err(|e| format!("Stream error: {e}"))?;
 
     output::print_top(&top_queries, req.out);
+
+    Ok(())
+}
+
+pub async fn handle_context(
+    ctx: &mut context::Context,
+    command: &cli::ContextCommand,
+    out: model::OutputFormat,
+) -> Result<(), String> {
+    match command {
+        cli::ContextCommand::List => {
+            let names = ctx.list();
+            output::print_context_list(&names, out);
+        }
+
+        cli::ContextCommand::Current => {
+            let active = ctx.active_profile_name();
+            output::print_context_current(active, out);
+        }
+
+        cli::ContextCommand::Show { name } => {
+            let profile = ctx
+                .get_profile(name)
+                .map_err(|e| format!("show profile error: {}", e))?;
+            output::print_context_profile(&profile, out);
+        }
+
+        cli::ContextCommand::Set { command } => match command {
+            cli::ContextSetCommand::Current { name } => {
+                ctx.set_default(name)
+                    .map_err(|e| format!("set current error: {}", e))?;
+            }
+            cli::ContextSetCommand::Profile {
+                name,
+                urls,
+                user,
+                password,
+            } => {
+                ctx.set_profile(
+                    model::ContextProfile {
+                        user: user.clone(),
+                        password: password.clone(),
+                        urls: urls.clone(),
+                    },
+                    name,
+                )
+                .map_err(|e| format!("set profile error: {}", e))?;
+            }
+        },
+    }
 
     Ok(())
 }
