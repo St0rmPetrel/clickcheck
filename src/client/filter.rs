@@ -49,8 +49,8 @@ impl QueryLogFilter {
     }
 }
 
-impl From<model::Filter> for QueryLogFilter {
-    fn from(args: model::Filter) -> Self {
+impl From<model::QueriesFilter> for QueryLogFilter {
+    fn from(args: model::QueriesFilter) -> Self {
         Self {
             from: args.from,
             to: args.to,

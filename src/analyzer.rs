@@ -1,4 +1,4 @@
-use crate::model::{QueryLog, SortBy, WeightedQueryLog};
+use crate::model::{QueriesSortBy, QueryLog, WeightedQueryLog};
 use std::collections::HashMap;
 use tokio::sync::mpsc::Receiver;
 
@@ -7,16 +7,16 @@ struct Analyzer {
     total_weight: u64,
 }
 
-pub async fn top(
+pub async fn top_queries(
     receiver: Receiver<QueryLog>,
     limit: usize,
-    sort_by: SortBy,
+    sort_by: QueriesSortBy,
 ) -> Vec<WeightedQueryLog> {
     let mut analyzer = Analyzer::new();
 
     analyzer.collect_logs(receiver).await;
 
-    analyzer.top(limit, sort_by)
+    analyzer.top_queries(limit, sort_by)
 }
 
 impl Analyzer {
@@ -57,19 +57,19 @@ impl Analyzer {
         }
     }
 
-    fn top(&self, limit: usize, sort_by: SortBy) -> Vec<WeightedQueryLog> {
+    fn top_queries(&self, limit: usize, sort_by: QueriesSortBy) -> Vec<WeightedQueryLog> {
         let mut top_queries: Vec<_> = self.queries.values().collect();
 
         top_queries.sort_by_key(|q| {
             std::cmp::Reverse(match sort_by {
-                SortBy::Weight => q.weight(),
-                SortBy::CpuTime => q.system_time_us + q.system_time_us,
-                SortBy::QueryDuration => q.query_duration_ms,
-                SortBy::ReadRows => q.read_rows,
-                SortBy::ReadBytes => q.read_bytes,
-                SortBy::MemoryUsage => q.memory_usage,
-                SortBy::UserTime => q.user_time_us,
-                SortBy::SystemTime => q.system_time_us,
+                QueriesSortBy::Weight => q.weight(),
+                QueriesSortBy::CpuTime => q.system_time_us + q.system_time_us,
+                QueriesSortBy::QueryDuration => q.query_duration_ms,
+                QueriesSortBy::ReadRows => q.read_rows,
+                QueriesSortBy::ReadBytes => q.read_bytes,
+                QueriesSortBy::MemoryUsage => q.memory_usage,
+                QueriesSortBy::UserTime => q.user_time_us,
+                QueriesSortBy::SystemTime => q.system_time_us,
             })
         });
         top_queries.truncate(limit);

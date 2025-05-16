@@ -1,4 +1,4 @@
-use crate::model::{OutputFormat, SortBy};
+use crate::model::{OutputFormat, QueriesSortBy};
 use clap::{Args, Parser, Subcommand};
 use std::path::PathBuf;
 use time::format_description::well_known::Rfc3339;
@@ -32,13 +32,21 @@ pub struct CliArgs {
 
 #[derive(Subcommand)]
 pub enum Command {
-    /// Top analysis: queries, tables or users
-    Top {
-        #[command(subcommand)]
-        command: TopCommand,
+    /// Show top queries group by normalized_query_hash
+    Queries {
+        /// number of output queries
+        #[arg(long, default_value_t = 5)]
+        limit: usize,
+
+        /// Field to sort queries by in top results, descending order.
+        #[arg(long, default_value = "weight")]
+        sort_by: QueriesSortBy,
 
         #[clap(flatten)]
-        args: TopArgs,
+        filter: QueriesFilterArgs,
+
+        #[clap(flatten)]
+        conn: ConnectArgs,
     },
 
     /// Manage connection contexts (profiles) for ClickHouse clusters.
@@ -48,25 +56,8 @@ pub enum Command {
     },
 }
 
-#[derive(Subcommand)]
-pub enum TopCommand {
-    /// Show top N heavy queries
-    Queries,
-}
-
-#[derive(Args)]
-pub struct TopArgs {
-    /// number of output queries
-    #[arg(long, default_value_t = 5, global = true)]
-    pub limit: usize,
-
-    /// Field to sort queries by in top results, descending order.
-    #[arg(long, default_value = "weight", global = true)]
-    pub sort_by: SortBy,
-
-    #[clap(flatten)]
-    pub filter: FilterArgs,
-
+#[derive(Args, Clone)]
+pub struct ConnectArgs {
     /// ClickHouse node URL (can be specified multiple times)
     #[arg(short = 'U', long = "url", global = true)]
     pub urls: Vec<String>,
@@ -81,7 +72,7 @@ pub struct TopArgs {
 }
 
 #[derive(Args, Clone)]
-pub struct FilterArgs {
+pub struct QueriesFilterArgs {
     /// Lower bound for event_time (inclusive). Supports RFC3339 or YYYY-MM-DD.
     /// Examples: "2024-05-04T15:00:00Z", "2024-05-04"
     #[arg(long,value_parser = parse_datetime, global = true)]

@@ -7,7 +7,7 @@ pub mod model;
 pub mod output;
 
 use clap::Parser;
-use cli::{CliArgs, Command, TopCommand};
+use cli::{CliArgs, Command};
 
 pub async fn run() -> Result<(), String> {
     let cli_args = CliArgs::parse();
@@ -16,27 +16,32 @@ pub async fn run() -> Result<(), String> {
         .map_err(|e| format!("context error: {e}"))?;
 
     match &cli_args.command {
-        Command::Top { command, args } => match command {
-            TopCommand::Queries => {
-                let profile = resolve_profile(&args, &ctx)?;
-                let client = client::Client::new(client::Config {
-                    urls: &profile.urls,
-                    user: &profile.user,
-                    password: &profile.password,
-                });
-                command::handle_top_queries(
-                    client,
-                    model::TopQueryRequest {
-                        limit: args.limit,
-                        sort_by: args.sort_by.clone(),
-                        filter: args.filter.clone().into(),
-                        out: cli_args.out,
-                    },
-                )
-                .await?
-            }
-        },
-        Command::Context { command } => command::handle_context(&mut ctx, command, cli_args.out).await?,
+        Command::Queries {
+            limit,
+            sort_by,
+            filter,
+            conn,
+        } => {
+            let profile = resolve_profile(&conn, &ctx)?;
+            let client = client::Client::new(client::Config {
+                urls: &profile.urls,
+                user: &profile.user,
+                password: &profile.password,
+            });
+            command::handle_top_queries(
+                client,
+                model::TopQueriesRequest {
+                    limit: limit.clone(),
+                    sort_by: sort_by.clone(),
+                    filter: filter.clone().into(),
+                    out: cli_args.out,
+                },
+            )
+            .await?
+        }
+        Command::Context { command } => {
+            command::handle_context(&mut ctx, command, cli_args.out).await?
+        }
     }
 
     Ok(())
@@ -46,7 +51,7 @@ pub async fn run() -> Result<(), String> {
 /// 1. If `--context` or `current` is set, use that ContextProfile.
 /// 2. Otherwise fall back to CLI flags (and error if missing).
 fn resolve_profile(
-    cli: &cli::TopArgs,
+    cli: &cli::ConnectArgs,
     ctx: &context::Context,
 ) -> Result<model::ContextProfile, String> {
     if let Some(profile) = ctx.profile() {

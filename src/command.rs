@@ -8,10 +8,10 @@ use tokio::sync::mpsc;
 
 pub async fn handle_top_queries(
     client: client::Client,
-    req: model::TopQueryRequest,
+    req: model::TopQueriesRequest,
 ) -> Result<(), String> {
     let (tx, rx) = mpsc::channel(128);
-    let analyzer_task = analyzer::top(rx, req.limit, req.sort_by);
+    let analyzer_task = analyzer::top_queries(rx, req.limit, req.sort_by);
 
     let stream_task = client.stream_logs_by_fingerprint(req.filter.into(), tx);
 

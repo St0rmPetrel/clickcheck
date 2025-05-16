@@ -66,7 +66,7 @@ pub enum OutputFormat {
 }
 
 #[derive(Debug, Clone, ValueEnum)]
-pub enum SortBy {
+pub enum QueriesSortBy {
     Weight,
     CpuTime,
     QueryDuration,
@@ -78,21 +78,21 @@ pub enum SortBy {
 }
 
 #[derive(Debug)]
-pub struct Filter {
+pub struct QueriesFilter {
     pub from: Option<OffsetDateTime>,
     pub to: Option<OffsetDateTime>,
 }
 
 #[derive(Debug)]
-pub struct TopQueryRequest {
+pub struct TopQueriesRequest {
     pub limit: usize,
-    pub sort_by: SortBy,
-    pub filter: Filter,
+    pub sort_by: QueriesSortBy,
+    pub filter: QueriesFilter,
     pub out: OutputFormat,
 }
 
-impl From<cli::FilterArgs> for Filter {
-    fn from(args: cli::FilterArgs) -> Self {
+impl From<cli::QueriesFilterArgs> for QueriesFilter {
+    fn from(args: cli::QueriesFilterArgs) -> Self {
         Self {
             from: args.from,
             to: args.to,
