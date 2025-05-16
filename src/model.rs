@@ -3,6 +3,7 @@ use clickhouse::Row;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use time::OffsetDateTime;
+use std::time::Duration;
 
 use crate::cli;
 
@@ -91,11 +92,35 @@ pub struct TopQueriesRequest {
     pub out: OutputFormat,
 }
 
+#[derive(Clone, Debug)]
+pub struct ErrorsFilter {
+    pub last: Option<Duration>,
+    pub min_count: Option<usize>,
+    pub code: Vec<i32>,
+}
+
+#[derive(Debug)]
+pub struct TopErrorsRequest {
+    pub limit: usize,
+    pub filter: ErrorsFilter,
+    pub out: OutputFormat,
+}
+
 impl From<cli::QueriesFilterArgs> for QueriesFilter {
     fn from(args: cli::QueriesFilterArgs) -> Self {
         Self {
             from: args.from,
             to: args.to,
+        }
+    }
+}
+
+impl From<cli::ErrorFilterArgs> for ErrorsFilter {
+    fn from(args: cli::ErrorFilterArgs) -> Self {
+        Self {
+            last: args.last,
+            min_count: args.min_count,
+            code: args.code,
         }
     }
 }
@@ -119,4 +144,17 @@ pub struct ContextSetProfileRequest {
     pub user: String,
     pub password: String,
     pub urls: Vec<String>,
+}
+
+#[derive(Row, Serialize, Deserialize, Debug, Clone)]
+/// Contains a list of all errors which have ever happened
+/// including the error code, last time and
+/// message with unsymbolized stacktrace.
+pub struct Error {
+    pub code: i32,
+    pub name: String,
+    pub count: u64,
+    #[serde(with = "clickhouse::serde::time::datetime")]
+    pub last_error_time: OffsetDateTime,
+    pub error_message: String,
 }

@@ -17,10 +17,10 @@ pub async fn run() -> Result<(), String> {
 
     match &cli_args.command {
         Command::Queries {
-            limit,
+            conn,
             sort_by,
             filter,
-            conn,
+            limit,
         } => {
             let profile = resolve_profile(&conn, &ctx)?;
             let client = client::Client::new(client::Config {
@@ -31,8 +31,29 @@ pub async fn run() -> Result<(), String> {
             command::handle_top_queries(
                 client,
                 model::TopQueriesRequest {
-                    limit: limit.clone(),
                     sort_by: sort_by.clone(),
+                    filter: filter.clone().into(),
+                    limit: limit.clone(),
+                    out: cli_args.out,
+                },
+            )
+            .await?
+        }
+        Command::Errors {
+            conn,
+            filter,
+            limit,
+        } => {
+            let profile = resolve_profile(&conn, &ctx)?;
+            let client = client::Client::new(client::Config {
+                urls: &profile.urls,
+                user: &profile.user,
+                password: &profile.password,
+            });
+            command::handle_top_errors(
+                client,
+                model::TopErrorsRequest {
+                    limit: limit.clone(),
                     filter: filter.clone().into(),
                     out: cli_args.out,
                 },

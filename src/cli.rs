@@ -34,9 +34,8 @@ pub struct CliArgs {
 pub enum Command {
     /// Show top queries group by normalized_query_hash
     Queries {
-        /// number of output queries
-        #[arg(long, default_value_t = 5)]
-        limit: usize,
+        #[clap(flatten)]
+        conn: ConnectArgs,
 
         /// Field to sort queries by in top results, descending order.
         #[arg(long, default_value = "weight")]
@@ -45,8 +44,22 @@ pub enum Command {
         #[clap(flatten)]
         filter: QueriesFilterArgs,
 
+        /// number of output queries
+        #[arg(long, default_value_t = 5)]
+        limit: usize,
+    },
+
+    /// Show top errors
+    Errors {
         #[clap(flatten)]
         conn: ConnectArgs,
+
+        #[clap(flatten)]
+        filter: ErrorFilterArgs,
+
+        /// number of output queries
+        #[arg(long, default_value_t = 5)]
+        limit: usize,
     },
 
     /// Manage connection contexts (profiles) for ClickHouse clusters.
@@ -56,18 +69,18 @@ pub enum Command {
     },
 }
 
-#[derive(Args, Clone)]
+#[derive(Args, Clone, Debug)]
 pub struct ConnectArgs {
     /// ClickHouse node URL (can be specified multiple times)
-    #[arg(short = 'U', long = "url", global = true)]
+    #[arg(short = 'U', long = "url")]
     pub urls: Vec<String>,
 
     /// ClickHouse username
-    #[arg(short = 'u', long, global = true)]
+    #[arg(short = 'u', long)]
     pub user: Option<String>,
 
     /// ClickHouse password
-    #[arg(short = 'p', long, global = true)]
+    #[arg(short = 'p', long)]
     pub password: Option<String>,
 }
 
@@ -75,12 +88,28 @@ pub struct ConnectArgs {
 pub struct QueriesFilterArgs {
     /// Lower bound for event_time (inclusive). Supports RFC3339 or YYYY-MM-DD.
     /// Examples: "2024-05-04T15:00:00Z", "2024-05-04"
-    #[arg(long,value_parser = parse_datetime, global = true)]
+    #[arg(long,value_parser = parse_datetime)]
     pub from: Option<OffsetDateTime>,
     /// Upper bound for event_time (exclusive). Supports RFC3339 or YYYY-MM-DD.
     /// Examples: "2024-05-04T15:00:00Z", "2024-05-04"
-    #[arg(long,value_parser = parse_datetime, global = true)]
+    #[arg(long,value_parser = parse_datetime)]
     pub to: Option<OffsetDateTime>,
+}
+
+#[derive(Args, Debug, Clone)]
+pub struct ErrorFilterArgs {
+    /// Only include errors that occurred within the last specified time period.
+    /// Accepts human-readable durations like '15days 2min 2s', etc
+    #[arg(long, value_parser = humantime::parse_duration)]
+    pub last: Option<std::time::Duration>,
+    /// Filter out errors that occurred fewer than N times across all nodes.
+    /// Useful to focus on recurring or high-impact issues.
+    #[arg(long)]
+    pub min_count: Option<usize>,
+    /// Filter errors by specific ClickHouse error code.
+    /// Can be used multiple times to include multiple codes.
+    #[arg(long)]
+    pub code: Vec<i32>,
 }
 
 #[derive(Subcommand)]

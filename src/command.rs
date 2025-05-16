@@ -19,7 +19,25 @@ pub async fn handle_top_queries(
 
     stream_result.map_err(|e| format!("Stream error: {e}"))?;
 
-    output::print_top(&top_queries, req.out);
+    output::print_top_queries(&top_queries, req.out);
+
+    Ok(())
+}
+
+pub async fn handle_top_errors(
+    client: client::Client,
+    req: model::TopErrorsRequest,
+) -> Result<(), String> {
+    let (tx, rx) = mpsc::channel(128);
+    let analyzer_task = analyzer::top_errors(rx, req.limit);
+
+    let stream_task = client.stream_error_by_code(req.filter.into(), tx);
+
+    let (stream_result, top_errors) = tokio::join!(stream_task, analyzer_task);
+
+    stream_result.map_err(|e| format!("Stream error: {e}"))?;
+
+    output::print_top_errors(&top_errors, req.out);
 
     Ok(())
 }

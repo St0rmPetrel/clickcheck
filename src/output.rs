@@ -1,11 +1,48 @@
-use crate::model::{ContextProfile, OutputFormat as Format, WeightedQueryLog};
+use crate::model::{ContextProfile, Error, OutputFormat as Format, WeightedQueryLog};
 use serde::Serialize;
+use time::format_description::well_known::Rfc3339;
 
-pub fn print_top(queries: &[WeightedQueryLog], format: Format) {
+pub fn print_top_queries(queries: &[WeightedQueryLog], format: Format) {
     match format {
         Format::Json => print_top_json(queries),
         Format::Yaml => print_top_yaml(queries),
         Format::Text => print_top_text(queries),
+    }
+}
+
+pub fn print_top_errors(errors: &[Error], format: Format) {
+    match format {
+        Format::Json => match serde_json::to_string_pretty(&errors) {
+            Ok(json) => println!("{json}"),
+            Err(err) => eprintln!("Failed to serialize to JSON: {err}"),
+        },
+        Format::Yaml => match serde_yaml::to_string(&errors) {
+            Ok(yaml) => println!("{yaml}"),
+            Err(err) => eprintln!("Failed to serialize to YAML: {err}"),
+        },
+        Format::Text => {
+            if errors.is_empty() {
+                println!("No errors found.");
+                return;
+            }
+
+            println!(
+                "{:<6} {:<25} {:<8} {:<20}",
+                "Code", "Name", "Count", "Last Seen",
+            );
+            println!("{}", "-".repeat(59));
+
+            for error in errors {
+                let time_str = error
+                    .last_error_time
+                    .format(&Rfc3339)
+                    .unwrap_or_else(|_| "-".into());
+                println!(
+                    "{:<6} {:<25} {:<8} {:<20}",
+                    error.code, error.name, error.count, time_str,
+                );
+            }
+        }
     }
 }
 

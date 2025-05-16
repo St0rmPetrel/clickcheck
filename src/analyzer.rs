@@ -1,9 +1,10 @@
-use crate::model::{QueriesSortBy, QueryLog, WeightedQueryLog};
+use crate::model::{Error, QueriesSortBy, QueryLog, WeightedQueryLog};
 use std::collections::HashMap;
 use tokio::sync::mpsc::Receiver;
 
 struct Analyzer {
     queries: HashMap<u64, QueryLog>,
+    errors: HashMap<i32, Error>,
     total_weight: u64,
 }
 
@@ -19,11 +20,20 @@ pub async fn top_queries(
     analyzer.top_queries(limit, sort_by)
 }
 
+pub async fn top_errors(receiver: Receiver<Error>, limit: usize) -> Vec<Error> {
+    let mut analyzer = Analyzer::new();
+
+    analyzer.collect_errors(receiver).await;
+
+    analyzer.top_errors(limit)
+}
+
 impl Analyzer {
     // Create a new Analyzer
     fn new() -> Self {
         Self {
             queries: HashMap::new(),
+            errors: HashMap::new(),
             total_weight: 0,
         }
     }
@@ -51,9 +61,27 @@ impl Analyzer {
             .or_insert(log);
     }
 
+    fn merge_error(&mut self, err: Error) {
+        self.errors
+            .entry(err.code)
+            .and_modify(|existing| {
+                existing.count += err.count;
+                if err.last_error_time > existing.last_error_time {
+                    existing.last_error_time = err.last_error_time;
+                }
+            })
+            .or_insert(err);
+    }
+
     async fn collect_logs(&mut self, mut rx: Receiver<QueryLog>) {
         while let Some(log) = rx.recv().await {
             self.merge_query(log);
+        }
+    }
+
+    async fn collect_errors(&mut self, mut rx: Receiver<Error>) {
+        while let Some(err) = rx.recv().await {
+            self.merge_error(err);
         }
     }
 
@@ -83,5 +111,14 @@ impl Analyzer {
                 query: q.clone(),
             })
             .collect()
+    }
+
+    fn top_errors(self, limit: usize) -> Vec<Error> {
+        let mut top_errors: Vec<Error> = self.errors.values().cloned().collect();
+
+        top_errors.sort_by_key(|e| (std::cmp::Reverse(e.count), e.code));
+        top_errors.truncate(limit);
+
+        top_errors
     }
 }

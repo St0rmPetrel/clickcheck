@@ -1,4 +1,5 @@
 use crate::model;
+use std::time::Duration;
 use time::OffsetDateTime;
 use time::macros::format_description;
 
@@ -10,6 +11,8 @@ pub struct QueryLogFilter {
 
 pub enum QueryParam {
     DateTime(OffsetDateTime),
+    UInt64(u64),
+    Int32(i32),
 }
 
 impl QueryParam {
@@ -20,6 +23,8 @@ impl QueryParam {
 
                 Ok(t.format(&format)?)
             }
+            QueryParam::UInt64(v) => Ok(format!("{}", v)),
+            QueryParam::Int32(v) => Ok(format!("{}", v)),
         }
     }
 }
@@ -55,5 +60,72 @@ impl From<model::QueriesFilter> for QueryLogFilter {
             from: args.from,
             to: args.to,
         }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct ErrorFilter {
+    pub last: Option<Duration>,
+    pub min_count: Option<usize>,
+    pub code: Vec<i32>,
+}
+
+impl From<model::ErrorsFilter> for ErrorFilter {
+    fn from(args: model::ErrorsFilter) -> Self {
+        Self {
+            last: args.last,
+            min_count: args.min_count,
+            code: args.code,
+        }
+    }
+}
+
+impl ErrorFilter {
+    /// Собирает SQL-фрагменты WHERE и возвращает (условие, параметры)
+    pub fn build_where(&self) -> (String, Vec<QueryParam>) {
+        let mut clauses: Vec<String> = Vec::new();
+        let mut params = Vec::new();
+
+        if !self.code.is_empty() {
+            let placeholders = vec!["?"; self.code.len()].join(", ");
+            clauses.push(format!("code IN ({})", placeholders));
+            self.code.iter().for_each(|code| {
+                params.push(QueryParam::Int32(*code));
+            });
+        }
+
+        let where_clause = if clauses.is_empty() {
+            String::new()
+        } else {
+            format!("AND {}", clauses.join(" AND "))
+        };
+
+        (where_clause, params)
+    }
+
+    /// Собирает SQL-фрагменты HAVING и возвращает (условие, параметры)
+    pub fn build_having(&self) -> (String, Vec<QueryParam>) {
+        let mut clauses = Vec::new();
+        let mut params = Vec::new();
+
+        if let Some(min_count) = self.min_count {
+            clauses.push("count >= ?");
+            params.push(QueryParam::UInt64(min_count as u64));
+        }
+
+        if let Some(last) = self.last {
+            let now = OffsetDateTime::now_utc();
+            let threshold = now - last;
+            clauses.push("last_error_time >= ?");
+            params.push(QueryParam::DateTime(threshold));
+        }
+
+        let having_clause = if clauses.is_empty() {
+            String::new()
+        } else {
+            format!("AND {}", clauses.join(" AND "))
+        };
+
+        (having_clause, params)
     }
 }

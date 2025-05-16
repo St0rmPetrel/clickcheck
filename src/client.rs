@@ -1,12 +1,12 @@
 mod filter;
 
-use crate::model::QueryLog;
+use crate::model::{Error, QueryLog};
 use clickhouse::{Client as ChClient, error::Error as ChError};
 use futures::future::try_join_all;
 use thiserror::Error;
 use tokio::sync::mpsc::{Sender, error::SendError};
 
-use filter::{QueryLogFilter};
+use filter::{ErrorFilter, QueryLogFilter};
 
 pub struct Client {
     nodes: Vec<ChClient>,
@@ -23,8 +23,11 @@ pub enum ClientError {
     #[error("clickhouse query error: {0}")]
     Query(#[from] ChError),
 
-    #[error("failed to send query log to analyzer: {0}")]
-    Send(#[from] SendError<QueryLog>),
+    #[error("failed to send query log: {0}")]
+    SendQueryLog(#[from] SendError<QueryLog>),
+
+    #[error("failed to send error: {0}")]
+    SendError(#[from] SendError<Error>),
 
     #[error("failed to format datetime for query: {0}")]
     Format(#[from] time::error::Format),
@@ -89,6 +92,66 @@ impl Client {
                 }
 
                 let mut cursor = query.fetch::<QueryLog>()?;
+
+                while let Some(row) = cursor.next().await? {
+                    sender.send(row).await?;
+                }
+
+                Ok::<(), ClientError>(())
+            };
+
+            futures.push(fut);
+        }
+
+        try_join_all(futures).await?;
+
+        Ok(())
+    }
+
+    pub async fn stream_error_by_code(
+        &self,
+        filter: ErrorFilter,
+        sender: Sender<Error>,
+    ) -> Result<(), ClientError> {
+        let mut futures = Vec::new();
+
+        for node in &self.nodes {
+            let sender = sender.clone();
+            let node = node.clone();
+            let filter = filter.clone();
+
+            let fut = async move {
+                let (where_clause, where_params) = filter.build_where();
+                let (having_clause, having_params) = filter.build_having();
+                let query = format!(
+                    r#"
+                        SELECT
+                            code,
+                            any(name)        AS name,
+                            sum(value)       AS count,
+                            max(last_error_time)    AS last_error_time,
+                            any(last_error_message) AS error_message
+                        FROM system.errors
+                        WHERE 1 = 1
+                          {}
+                        GROUP BY code
+                        HAVING 1 = 1
+                          {}
+                        "#,
+                    &where_clause, &having_clause,
+                );
+
+                // Combine all parameters
+                let mut params = Vec::new();
+                params.extend(where_params);
+                params.extend(having_params);
+
+                let mut query = node.query(&query);
+                for param in params {
+                    query = query.bind(param.to_sql_string()?);
+                }
+
+                let mut cursor = query.fetch::<Error>()?;
 
                 while let Some(row) = cursor.next().await? {
                     sender.send(row).await?;
