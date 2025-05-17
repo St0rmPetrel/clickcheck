@@ -136,6 +136,9 @@ pub fn print_context_profile(profile: &ContextProfile, format: Format) {
                     &profile.password
                 }
             );
+            if let Some(_) = profile.accept_invalid_certificate {
+                println!("  Accept invalid certificate: {}", true);
+            }
         }
         Format::Json => {
             // Serialize the ContextProfile itself

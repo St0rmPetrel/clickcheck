@@ -8,6 +8,12 @@ use tokio::sync::mpsc::{Sender, error::SendError};
 
 use filter::{ErrorFilter, QueryLogFilter};
 
+use std::time::Duration;
+
+use hyper_util::client::legacy::Client as HyperClient;
+use hyper_util::client::legacy::connect::HttpConnector;
+use hyper_util::rt::TokioExecutor;
+
 pub struct Client {
     nodes: Vec<ChClient>,
 }
@@ -16,6 +22,7 @@ pub struct Config<'a> {
     pub urls: &'a [String],
     pub user: &'a str,
     pub password: &'a str,
+    pub danger_accept_invalid_certs: bool,
 }
 
 #[derive(Debug, Error)]
@@ -39,11 +46,36 @@ impl Client {
             .urls
             .iter()
             .map(|url| {
-                ChClient::default()
-                    .with_url(url)
-                    .with_user(cfg.user)
-                    .with_password(cfg.password)
-                    .with_database("system")
+                if cfg.danger_accept_invalid_certs {
+                    const TCP_KEEPALIVE: Duration = Duration::from_secs(60);
+
+                    // ClickHouse uses 3s by default.
+                    // See https://github.com/ClickHouse/ClickHouse/blob/368cb74b4d222dc5472a7f2177f6bb154ebae07a/programs/server/config.xml#L201
+                    const POOL_IDLE_TIMEOUT: Duration = Duration::from_secs(2);
+                    let mut connector = HttpConnector::new(); // or HttpsConnectorBuilder
+
+                    connector.set_keepalive(Some(TCP_KEEPALIVE));
+                    connector.enforce_http(false);
+
+                    let tls = hyper_tls::native_tls::TlsConnector::builder()
+                        .danger_accept_invalid_certs(true)
+                        .build()
+                        .unwrap();
+
+                    let connector = hyper_tls::HttpsConnector::from((connector, tls.into()));
+
+                    let hyper_client = HyperClient::builder(TokioExecutor::new())
+                        .pool_idle_timeout(POOL_IDLE_TIMEOUT)
+                        .build(connector);
+
+                    ChClient::with_http_client(hyper_client)
+                } else {
+                    ChClient::default()
+                }
+                .with_url(url)
+                .with_user(cfg.user)
+                .with_password(cfg.password)
+                .with_database("system")
             })
             .collect();
 

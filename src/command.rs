@@ -75,12 +75,18 @@ pub async fn handle_context(
                 urls,
                 user,
                 password,
+                accept_invalid_certificate,
             } => {
                 ctx.set_profile(
                     model::ContextProfile {
                         user: user.clone(),
                         password: password.clone(),
                         urls: urls.clone(),
+                        accept_invalid_certificate: if *accept_invalid_certificate {
+                            Some(true)
+                        } else {
+                            None
+                        },
                     },
                     name,
                 )

@@ -130,6 +130,7 @@ pub struct ContextProfile {
     pub user: String,
     pub password: String,
     pub urls: Vec<String>,
+    pub accept_invalid_certificate: Option<bool>,
 }
 
 #[derive(Debug, Default, Serialize, Deserialize)]

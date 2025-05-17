@@ -82,6 +82,15 @@ pub struct ConnectArgs {
     /// ClickHouse password
     #[arg(short = 'p', long)]
     pub password: Option<String>,
+
+    /// Accept invalid (e.g., self-signed) TLS certificates when connecting over HTTPS.
+    ///
+    /// This option is useful when connecting to ClickHouse instances with self-signed
+    /// or untrusted certificates. It **disables certificate validation**, which can be
+    /// helpful for development or internal environments, but is **not recommended for production**
+    /// due to potential security risks.
+    #[arg(long, default_value = "false")]
+    pub accept_invalid_certificate: bool,
 }
 
 #[derive(Args, Clone)]
@@ -145,6 +154,15 @@ pub enum ContextSetCommand {
         /// ClickHouse password
         #[arg(short = 'p', long, default_value = "")]
         password: String,
+
+        /// Accept invalid (e.g., self-signed) TLS certificates when connecting over HTTPS.
+        ///
+        /// This option is useful when connecting to ClickHouse instances with self-signed
+        /// or untrusted certificates. It **disables certificate validation**, which can be
+        /// helpful for development or internal environments, but is **not recommended for production**
+        /// due to potential security risks.
+        #[arg(long, default_value = "false")]
+        accept_invalid_certificate: bool,
     },
     /// Set the stored default context to an existing profile
     Current { name: String },
