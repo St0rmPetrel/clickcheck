@@ -28,7 +28,8 @@ pub async fn run() -> Result<(), String> {
                 user: &profile.user,
                 password: &profile.password,
                 danger_accept_invalid_certs: profile.accept_invalid_certificate.unwrap_or(false),
-            });
+            })
+            .map_err(|e| format!("create clickhouse client error: {e}"))?;
             command::handle_top_queries(
                 client,
                 model::TopQueriesRequest {
@@ -51,7 +52,8 @@ pub async fn run() -> Result<(), String> {
                 user: &profile.user,
                 password: &profile.password,
                 danger_accept_invalid_certs: profile.accept_invalid_certificate.unwrap_or(false),
-            });
+            })
+            .map_err(|e| format!("create clickhouse client error: {e}"))?;
             command::handle_top_errors(
                 client,
                 model::TopErrorsRequest {

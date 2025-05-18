@@ -9,6 +9,7 @@ pub struct QueryLogFilter {
     pub to: Option<OffsetDateTime>,
 }
 
+#[derive(Debug, Clone)]
 pub enum QueryParam {
     DateTime(OffsetDateTime),
     UInt64(u64),
@@ -31,7 +32,7 @@ impl QueryParam {
 
 impl QueryLogFilter {
     /// Собирает SQL-фрагменты WHERE и возвращает (условие, параметры)
-    pub fn build_where(self) -> (String, Vec<QueryParam>) {
+    pub fn build_where(&self) -> (String, Vec<QueryParam>) {
         let mut clauses = Vec::new();
         let mut params = Vec::new();
 
