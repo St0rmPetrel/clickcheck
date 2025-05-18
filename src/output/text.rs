@@ -1,0 +1,115 @@
+use crate::model;
+use ascii_table::AsciiTable;
+use std::time::Duration;
+use time::format_description::well_known::Rfc3339;
+
+const MAX_COLUMN_LEN: usize = 30;
+
+/// Clean and shorten string for display in tables.
+/// - Removes newlines and trims whitespace
+/// - Truncates to `max_len` and appends ellipsis if too long
+fn compact_str(s: &str, max_len: usize) -> String {
+    let mut compact = s
+        .replace('\n', " ") // убрать переносы строк
+        .replace('\t', " ") // убрать табы
+        .split_whitespace() // разбить по пробелам
+        .collect::<Vec<_>>() // собрать в вектор
+        .join(" ");
+
+    if compact.len() > max_len {
+        compact.truncate(max_len);
+        compact.push('…');
+    }
+
+    compact
+}
+
+/// Print a slice of `WeightedQueryLog` in an ASCII table,
+/// showing only the most important columns.
+pub fn print_weighted_queries_table(logs: &[model::WeightedQueryLog]) {
+    let mut table = AsciiTable::default();
+    table.column(0).set_header("Hash");
+    table.column(1).set_header("Query duration");
+    table.column(2).set_header("CPU time");
+    table.column(3).set_header("Weight");
+    table.column(4).set_header("Query");
+
+    let data: Vec<_> = logs
+        .iter()
+        .map(|l| {
+            let cpu_time = Duration::from_micros(l.cpu_time_us);
+            let query_duration = Duration::from_millis(l.query.query_duration_ms);
+            let hash = format!("{:#x}", l.query.normalized_query_hash);
+
+            vec![
+                hash.to_string(),
+                humantime::format_duration(query_duration).to_string(),
+                humantime::format_duration(cpu_time).to_string(),
+                l.weight.to_string(),
+                compact_str(&l.query.query, MAX_COLUMN_LEN),
+            ]
+        })
+        .collect();
+    table.print(data);
+}
+
+/// Print a slice of `Errors` in an ASCII table.
+pub fn print_errors_table(errs: &[model::Error]) {
+    let mut table = AsciiTable::default();
+    table.column(0).set_header("Code");
+    table.column(1).set_header("Name");
+    table.column(2).set_header("Count");
+    table.column(3).set_header("Last Seen");
+    table.column(4).set_header("Message");
+
+    let data: Vec<_> = errs
+        .iter()
+        .map(|e| {
+            let last_seen = e
+                .last_error_time
+                .format(&Rfc3339)
+                .unwrap_or_else(|_| "-".into());
+            vec![
+                e.code.to_string(),
+                e.name.to_string(),
+                e.count.to_string(),
+                last_seen,
+                compact_str(&e.error_message, MAX_COLUMN_LEN),
+            ]
+        })
+        .collect();
+    table.print(data);
+}
+
+pub fn print_context_names_table(names: &[String]) {
+    let mut table = AsciiTable::default();
+    table.column(0).set_header("Name");
+
+    let data: Vec<_> = names.iter().map(|n| vec![n]).collect();
+    table.print(data);
+}
+
+pub fn print_context_current(active: Option<&str>) {
+    if let Some(name) = active {
+        println!("{name}");
+    } else {
+        println!("No active context set");
+    }
+}
+
+pub fn print_context_profile(profile: &model::ContextProfile) {
+    println!("Profile:");
+    println!("  URLs: {}", profile.urls.join(", "));
+    println!("  User: {}", profile.user);
+    println!(
+        "  Password: {}",
+        if profile.password.is_empty() {
+            "(empty)"
+        } else {
+            &profile.password
+        }
+    );
+            if let Some(_) = profile.accept_invalid_certificate {
+                println!("  Accept invalid certificate: {}", true);
+            }
+}
