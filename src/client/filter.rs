@@ -7,6 +7,7 @@ use time::macros::format_description;
 pub struct QueryLogFilter {
     pub from: Option<OffsetDateTime>,
     pub to: Option<OffsetDateTime>,
+    pub last: Option<Duration>,
 }
 
 #[derive(Debug, Clone)]
@@ -37,11 +38,17 @@ impl QueryLogFilter {
         let mut params = Vec::new();
 
         if let Some(from) = self.from {
-            clauses.push("event_time >= ?");
+            clauses.push("event_time >= toDateTime(?, 'UTC')");
             params.push(QueryParam::DateTime(from));
         }
+        if let Some(last) = self.last {
+            let now = OffsetDateTime::now_utc();
+            let threshold = now - last;
+            clauses.push("event_time >= toDateTime(?, 'UTC')");
+            params.push(QueryParam::DateTime(threshold));
+        }
         if let Some(to) = self.to {
-            clauses.push("event_time < ?");
+            clauses.push("event_time < toDateTime(?, 'UTC')");
             params.push(QueryParam::DateTime(to));
         }
 
@@ -60,6 +67,7 @@ impl From<model::QueriesFilter> for QueryLogFilter {
         Self {
             from: args.from,
             to: args.to,
+            last: args.last,
         }
     }
 }
@@ -117,7 +125,7 @@ impl ErrorFilter {
         if let Some(last) = self.last {
             let now = OffsetDateTime::now_utc();
             let threshold = now - last;
-            clauses.push("last_error_time >= ?");
+            clauses.push("last_error_time >= toDateTime(?, 'UTC')");
             params.push(QueryParam::DateTime(threshold));
         }
 

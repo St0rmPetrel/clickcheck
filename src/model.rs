@@ -57,6 +57,7 @@ pub enum QueriesSortBy {
 pub struct QueriesFilter {
     pub from: Option<OffsetDateTime>,
     pub to: Option<OffsetDateTime>,
+    pub last: Option<Duration>,
 }
 
 #[derive(Debug)]
@@ -86,6 +87,7 @@ impl From<cli::QueriesFilterArgs> for QueriesFilter {
         Self {
             from: args.from,
             to: args.to,
+            last: args.last,
         }
     }
 }

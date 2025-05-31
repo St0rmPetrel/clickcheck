@@ -29,13 +29,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Moved impact calculation logic to dedicated `QueryMetrics` model
   - Improved human-readable formatting for all impact values
 - **Flag validation rules**:
-  - `--from` now requires `--to` when used
-  - `--last` is now mutually exclusive with `--from`/`--to`
+  - `--last` is now mutually exclusive with `--from`
+  - `--from` or `--last` is required
   - `--sort-by` now accepts all impact types
 
 ### Deprecated
 - `weight` field in JSON output (use `total_impact`)
 - `--sort-by weight` (use `--sort-by total_impact`)
+
+### Fixed
+- time zone in all time filters.
 
 ## [0.1.0] - 2025-05-31
 

@@ -1,5 +1,5 @@
 use crate::model::{OutputFormat, QueriesSortBy};
-use clap::{Args, Parser, Subcommand};
+use clap::{ArgGroup, Args, Parser, Subcommand};
 use std::path::PathBuf;
 use time::format_description::well_known::Rfc3339;
 use time::macros::format_description;
@@ -94,15 +94,33 @@ pub struct ConnectArgs {
 }
 
 #[derive(Args, Clone)]
+#[command(group(
+    ArgGroup::new("from_or_last")
+        .args(["from", "last"])
+        .required(true)
+))]
 pub struct QueriesFilterArgs {
     /// Lower bound for event_time (inclusive). Supports RFC3339 or YYYY-MM-DD.
     /// Examples: "2024-05-04T15:00:00Z", "2024-05-04"
-    #[arg(long,value_parser = parse_datetime)]
+    #[arg(
+        long,
+        value_parser = parse_datetime,
+        group = "from_or_last"
+    )]
     pub from: Option<OffsetDateTime>,
     /// Upper bound for event_time (exclusive). Supports RFC3339 or YYYY-MM-DD.
     /// Examples: "2024-05-04T15:00:00Z", "2024-05-04"
-    #[arg(long,value_parser = parse_datetime)]
+    #[arg(long, value_parser = parse_datetime)]
     pub to: Option<OffsetDateTime>,
+
+    /// Only include queries from the last specified time period
+    /// Accepts human-readable durations like '15days 2min 2s', etc
+    #[arg(
+        long,
+        value_parser = humantime::parse_duration,
+        group = "from_or_last"
+    )]
+    pub last: Option<std::time::Duration>,
 }
 
 #[derive(Args, Debug, Clone)]

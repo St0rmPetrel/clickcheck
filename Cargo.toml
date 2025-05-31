@@ -6,7 +6,7 @@ edition = "2024"
 [dependencies]
 ascii_table = { version = "4.0.7", features = ["auto_table_width"] }
 clap = { version = "4.5.37", features = ["derive"] }
-clickhouse = { version = "0.13.2", features = ["native-tls", "time"] }
+clickhouse = { version = "0.13.3", features = ["native-tls", "time"] }
 dirs-next = "2.0.0"
 futures = "0.3.31"
 humansize = "2.1.3"
