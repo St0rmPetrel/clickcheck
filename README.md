@@ -1,23 +1,5 @@
 # Roadmap for ch-query-analyzer
 
-## ✅ Already Implemented
-- **Multi-node input** support (analyze multiple ClickHouse nodes at once)
-- **Output formats**: Text, JSON, YAML
-- **Top N queries**: default sorted by weight, group by `normalized_query_hash`
-- **Flexible sorting**: top queries can be sorted by any field (e.g. `weight`, `cpu_time`, etc.)
-- **Context/profile system**:
-  - Named profiles (`dev`, `prod`, …) stored in `~/.config/ch-query-analyzer/config.toml`
-  - Each profile has:
-    - Multiple `urls` for the cluster
-    - `user` and `password`
-  - `ch-query-analyzer context set profile <NAME> …` to create/update
-  - `ch-query-analyzer context set current <NAME>` to choose default
-  - `--context <NAME>` override per-command
-- **Error-log Analysis (`errors` command)**
-  - Aggregate system.errors by code with counts, last time, message
-  - Filters: --last, --min-count, --code, --remote-only
-  - Display top errors in Text/JSON/YAML
-
 ## 🚀 Planned & Suggested Features
 
 ### “Get” & “Stats” Subcommands on queries
@@ -50,3 +32,21 @@
 
 ### Export Integrations
 - Flamegraph integration: generate per-query flamegraphs or CPU profiles 
+
+## ✅ Already Implemented
+- **Multi-node input** support (analyze multiple ClickHouse nodes at once)
+- **Output formats**: Text, JSON, YAML
+- **Top N queries**: default sorted by weight, group by `normalized_query_hash`
+- **Flexible sorting**: top queries can be sorted by any field (e.g. `weight`, `cpu_time`, etc.)
+- **Context/profile system**:
+  - Named profiles (`dev`, `prod`, …) stored in `~/.config/ch-query-analyzer/config.toml`
+  - Each profile has:
+    - Multiple `urls` for the cluster
+    - `user` and `password`
+  - `ch-query-analyzer context set profile <NAME> …` to create/update
+  - `ch-query-analyzer context set current <NAME>` to choose default
+  - `--context <NAME>` override per-command
+- **Error-log Analysis (`errors` command)**
+  - Aggregate system.errors by code with counts, last time, message
+  - Filters: --last, --min-count, --code, --remote-only
+  - Display top errors in Text/JSON/YAML
