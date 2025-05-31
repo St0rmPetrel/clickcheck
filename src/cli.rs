@@ -38,7 +38,7 @@ pub enum Command {
         conn: ConnectArgs,
 
         /// Field to sort queries by in top results, descending order.
-        #[arg(long, default_value = "weight")]
+        #[arg(long, default_value = "total-impact")]
         sort_by: QueriesSortBy,
 
         #[clap(flatten)]

@@ -129,7 +129,8 @@ impl Client {
     ) -> Result<(), ClientError> {
         let (where_clause, params) = filter.build_where();
         let sql = format!(
-            r#"SELECT
+            r#"
+            SELECT
                normalized_query_hash,
                any(query) AS query,
                max(event_time) AS max_event_time,
@@ -139,7 +140,13 @@ impl Client {
                sum(read_bytes) AS read_bytes,
                sum(memory_usage) AS memory_usage,
                sum(ProfileEvents['UserTimeMicroseconds']) AS user_time_us,
-               sum(ProfileEvents['SystemTimeMicroseconds']) AS system_time_us
+               sum(ProfileEvents['SystemTimeMicroseconds']) AS system_time_us,
+
+               read_rows * 100 + read_bytes * 1 AS io_impact,
+               user_time_us * 10_000 + system_time_us * 10_000 AS cpu_impact,
+               memory_usage * 10 AS memory_impact,
+               query_duration_ms * 1_000_000 AS time_impact,
+               io_impact + cpu_impact + memory_impact + time_impact AS total_impact
             FROM query_log
             WHERE type != 'QueryStart' AND query_kind = 'Select' {where_clause}
             GROUP BY normalized_query_hash"#

@@ -1,14 +1,10 @@
-use crate::model::{ContextProfile, Error, OutputFormat as Format, WeightedQueryLog};
+use crate::model::{ContextProfile, Error, OutputFormat as Format, QueryLog};
 use serde::Serialize;
 
 mod text;
 
 // Вспомогательная функция для сериализации и печати
-fn serialize_and_print<T: Serialize + ?Sized>(
-    data: &T,
-    format: Format,     
-    data_description: &str,
-) {
+fn serialize_and_print<T: Serialize + ?Sized>(data: &T, format: Format, data_description: &str) {
     match format {
         Format::Json => match serde_json::to_string_pretty(data) {
             Ok(json) => println!("{json}"),
@@ -28,7 +24,7 @@ fn serialize_and_print<T: Serialize + ?Sized>(
     }
 }
 
-pub fn print_top_queries(queries: &[WeightedQueryLog], format: Format) {
+pub fn print_top_queries(queries: &[QueryLog], format: Format) {
     match format {
         Format::Text => text::print_weighted_queries_table(queries),
         Format::Json | Format::Yaml => serialize_and_print(queries, format, "top queries"),

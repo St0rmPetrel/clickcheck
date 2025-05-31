@@ -1,6 +1,6 @@
 use crate::model;
 use ascii_table::AsciiTable;
-use std::time::Duration;
+use humansize::{DECIMAL, format_size};
 use time::format_description::well_known::Rfc3339;
 
 const MAX_COLUMN_LEN: usize = 30;
@@ -26,27 +26,34 @@ fn compact_str(s: &str, max_len: usize) -> String {
 
 /// Print a slice of `WeightedQueryLog` in an ASCII table,
 /// showing only the most important columns.
-pub fn print_weighted_queries_table(logs: &[model::WeightedQueryLog]) {
+pub fn print_weighted_queries_table(logs: &[model::QueryLog]) {
     let mut table = AsciiTable::default();
     table.column(0).set_header("Hash");
-    table.column(1).set_header("Query duration");
-    table.column(2).set_header("CPU time");
-    table.column(3).set_header("Weight");
-    table.column(4).set_header("Query");
+    table.column(1).set_header("Query");
+    table.column(2).set_header("Total Impact");
+    table.column(3).set_header("IO Impact");
+    table.column(4).set_header("CPU Impact");
+    table.column(5).set_header("Memory Impact");
+    table.column(6).set_header("Time Impact");
 
     let data: Vec<_> = logs
         .iter()
         .map(|l| {
-            let cpu_time = Duration::from_micros(l.cpu_time_us);
-            let query_duration = Duration::from_millis(l.query.query_duration_ms);
-            let hash = format!("{:#x}", l.query.normalized_query_hash);
+            let hash = format!("{:#x}", l.normalized_query_hash);
+            let io_impact: String = format_size(l.io_impact, DECIMAL);
+            let cpu_impact: String = format_size(l.cpu_impact, DECIMAL);
+            let memory_impact: String = format_size(l.memory_impact, DECIMAL);
+            let time_impact: String = format_size(l.time_impact, DECIMAL);
+            let total_impact: String = format_size(l.total_impact, DECIMAL);
 
             vec![
                 hash.to_string(),
-                humantime::format_duration(query_duration).to_string(),
-                humantime::format_duration(cpu_time).to_string(),
-                l.weight.to_string(),
-                compact_str(&l.query.query, MAX_COLUMN_LEN),
+                compact_str(&l.query, MAX_COLUMN_LEN),
+                total_impact,
+                io_impact,
+                cpu_impact,
+                memory_impact,
+                time_impact,
             ]
         })
         .collect();
@@ -109,7 +116,7 @@ pub fn print_context_profile(profile: &model::ContextProfile) {
             &profile.password
         }
     );
-            if let Some(_) = profile.accept_invalid_certificate {
-                println!("  Accept invalid certificate: {}", true);
-            }
+    if let Some(_) = profile.accept_invalid_certificate {
+        println!("  Accept invalid certificate: {}", true);
+    }
 }

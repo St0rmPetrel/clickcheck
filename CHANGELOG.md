@@ -17,15 +17,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `--user` to filter by user accounts
   - `--database` to filter by database names
   - `--table` to filter by table names
+- Added specialized impact metrics for detailed analysis:
+  - `cpu_impact` (CPU time × 10k)
+  - `memory_impact` (memory usage × 10)
+  - `io_impact` (rows × 100 + bytes × 1)
+  - `time_impact` (duration × 1M)
 
 ### Changed
 - **Metrics rework in `queries` command**:
-  - Renamed `weight` metric to `general_weight` for clarity
-  - Moved `weight` calculation logic to `QueryLog` model
-  - Improved human-readable formatting for `weight` values
+  - Renamed `weight` metric to `total_impact` for clarity
+  - Moved impact calculation logic to dedicated `QueryMetrics` model
+  - Improved human-readable formatting for all impact values
 - **Flag validation rules**:
   - `--from` now requires `--to` when used
   - `--last` is now mutually exclusive with `--from`/`--to`
+  - `--sort-by` now accepts all impact types
+
+### Deprecated
+- `weight` field in JSON output (use `total_impact`)
+- `--sort-by weight` (use `--sort-by total_impact`)
 
 ## [0.1.0] - 2025-05-31
 
