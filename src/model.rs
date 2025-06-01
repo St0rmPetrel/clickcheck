@@ -107,7 +107,7 @@ pub struct ContextProfile {
     pub user: String,
     pub password: String,
     pub urls: Vec<String>,
-    pub accept_invalid_certificate: Option<bool>,
+    pub accept_invalid_certificate: bool,
 }
 
 #[derive(Debug, Default, Serialize, Deserialize)]

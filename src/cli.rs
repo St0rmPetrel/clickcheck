@@ -89,8 +89,8 @@ pub struct ConnectArgs {
     /// or untrusted certificates. It **disables certificate validation**, which can be
     /// helpful for development or internal environments, but is **not recommended for production**
     /// due to potential security risks.
-    #[arg(long, default_value = "false")]
-    pub accept_invalid_certificate: bool,
+    #[arg(long)]
+    pub accept_invalid_certificate: Option<bool>,
 }
 
 #[derive(Args, Clone)]
@@ -141,12 +141,19 @@ pub struct ErrorFilterArgs {
 
 #[derive(Subcommand)]
 pub enum ContextCommand {
+    /// Show config file which store context profiles
+    ConfigPath,
     /// List all available context profiles
     List,
     /// Show the active context (CLI override or stored default)
     Current,
     /// Show details for a specific profile by name
-    Show { name: String },
+    Show {
+        name: String,
+        /// Show sensitive information like passwords
+        #[arg(long, default_value = "false")]
+        show_secrets: bool,
+    },
     /// Commands to modify context profiles
     Set {
         #[command(subcommand)]

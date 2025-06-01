@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `memory_impact` (memory usage × 10)
   - `io_impact` (rows × 100 + bytes × 1)
   - `time_impact` (duration × 1M)
+- New `context config-path` command to display configuration file location
 
 ### Changed
 - **Metrics rework in `queries` command**:
@@ -32,13 +33,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `--last` is now mutually exclusive with `--from`
   - `--from` or `--last` is required
   - `--sort-by` now accepts all impact types
+- **BREAKING CHANGE**: `accept_invalid_certificate` field in profiles is now required (changed from `Option<bool>` to `bool`)
+  - Existing configs must add `accept_invalid_certificate = true/false` to each profile
 
 ### Deprecated
 - `weight` field in JSON output (use `total_impact`)
 - `--sort-by weight` (use `--sort-by total_impact`)
 
 ### Fixed
-- time zone in all time filters.
+- **Time zone handling in query filters**: 
+  - Fixed incorrect time filtering by explicitly specifying UTC timezone in DateTime conversions
+  - Changed from: `event_time >= ?` (implicit timezone)
+  - Changed to: `event_time >= toDateTime(?, 'UTC')` (explicit UTC)
+  - Impact: Queries now correctly filter by absolute time ranges regardless of server timezone settings
+  - Affected commands: All commands using time filters (`queries`, `errors`)
+- Improved error messages for malformed configuration files
+
+### Security
+- **Passwords now stored in encrypted system storage** (Keychain/Secret Service/Credential Manager)  
+- All passwords handled via `secrecy::Secret<String>` for:
+  - Automatic memory zeroization
+  - Protection against accidental logging
+  - Explicit access control
+- Removed password storage in config files (`#[serde(skip)]`)
+- Enhanced security for `context show` command
+  - Passwords are now masked by default (`[REDACTED]`)
+  - Requires new `--show-secrets` flag to reveal passwords
 
 ## [0.1.0] - 2025-05-31
 

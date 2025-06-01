@@ -27,7 +27,7 @@ pub async fn run() -> Result<(), String> {
                 urls: &profile.urls,
                 user: &profile.user,
                 password: &profile.password,
-                danger_accept_invalid_certs: profile.accept_invalid_certificate.unwrap_or(false),
+                danger_accept_invalid_certs: profile.accept_invalid_certificate,
             })
             .map_err(|e| format!("create clickhouse client error: {e}"))?;
             command::handle_top_queries(
@@ -51,7 +51,7 @@ pub async fn run() -> Result<(), String> {
                 urls: &profile.urls,
                 user: &profile.user,
                 password: &profile.password,
-                danger_accept_invalid_certs: profile.accept_invalid_certificate.unwrap_or(false),
+                danger_accept_invalid_certs: profile.accept_invalid_certificate,
             })
             .map_err(|e| format!("create clickhouse client error: {e}"))?;
             command::handle_top_errors(
@@ -90,8 +90,8 @@ fn resolve_profile(
         if let Some(password) = cli.password.as_deref() {
             profile.password = password.to_string();
         }
-        if cli.accept_invalid_certificate {
-            profile.accept_invalid_certificate = Some(true)
+        if let Some(_) = cli.accept_invalid_certificate {
+            profile.accept_invalid_certificate = true
         }
         return Ok(profile);
     };
@@ -105,10 +105,10 @@ fn resolve_profile(
         .clone()
         .ok_or("missing `--user`: supply it or set a context")?;
     let password = cli.password.clone().unwrap_or("".to_string());
-    let accept_invalid_certificate = if cli.accept_invalid_certificate {
-        Some(true)
+    let accept_invalid_certificate = if let Some(_) = cli.accept_invalid_certificate {
+        true
     } else {
-        None
+        false
     };
 
     Ok(model::ContextProfile {

@@ -48,6 +48,10 @@ pub async fn handle_context(
     out: model::OutputFormat,
 ) -> Result<(), String> {
     match command {
+        cli::ContextCommand::ConfigPath => {
+            let path = ctx.get_config_path();
+            output::print_context_config_path(path, out);
+        }
         cli::ContextCommand::List => {
             let names = ctx.list();
             output::print_context_list(&names, out);
@@ -58,10 +62,13 @@ pub async fn handle_context(
             output::print_context_current(active, out);
         }
 
-        cli::ContextCommand::Show { name } => {
-            let profile = ctx
+        cli::ContextCommand::Show { name, show_secrets } => {
+            let mut profile = ctx
                 .get_profile(name)
                 .map_err(|e| format!("show profile error: {}", e))?;
+            if !show_secrets {
+                profile.password = "[REDACTED]".to_string(); // Маскируем пароль
+            }
             output::print_context_profile(&profile, out);
         }
 
@@ -82,11 +89,7 @@ pub async fn handle_context(
                         user: user.clone(),
                         password: password.clone(),
                         urls: urls.clone(),
-                        accept_invalid_certificate: if *accept_invalid_certificate {
-                            Some(true)
-                        } else {
-                            None
-                        },
+                        accept_invalid_certificate: accept_invalid_certificate.clone(),
                     },
                     name,
                 )

@@ -104,6 +104,10 @@ pub fn print_context_current(active: Option<&str>) {
     }
 }
 
+pub fn print_context_config_path(path: &std::path::PathBuf) {
+    println!("{}", path.display());
+}
+
 pub fn print_context_profile(profile: &model::ContextProfile) {
     println!("Profile:");
     println!("  URLs: {}", profile.urls.join(", "));
@@ -116,7 +120,8 @@ pub fn print_context_profile(profile: &model::ContextProfile) {
             &profile.password
         }
     );
-    if let Some(_) = profile.accept_invalid_certificate {
-        println!("  Accept invalid certificate: {}", true);
-    }
+    println!(
+        "  Accept invalid certificate: {}",
+        profile.accept_invalid_certificate
+    );
 }

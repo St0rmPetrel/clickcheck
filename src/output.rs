@@ -68,6 +68,22 @@ pub fn print_context_current(active: Option<&str>, format: Format) {
     }
 }
 
+pub fn print_context_config_path(path: &std::path::PathBuf, format: Format) {
+    match format {
+        Format::Text => text::print_context_config_path(path),
+        Format::Json | Format::Yaml => {
+            #[derive(Serialize)]
+            struct ConfigPathWrapper<'a> {
+                config_path: &'a str,
+            }
+            let wrapper = ConfigPathWrapper {
+                config_path: &path.to_string_lossy(),
+            };
+            serialize_and_print(&wrapper, format, "context config-path")
+        }
+    }
+}
+
 pub fn print_context_profile(profile: &ContextProfile, format: Format) {
     match format {
         Format::Text => text::print_context_profile(profile),

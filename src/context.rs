@@ -8,8 +8,11 @@ use thiserror::Error;
 pub enum ContextError {
     #[error("read config error: {0}")]
     ReadConfig(#[from] std::io::Error),
-    #[error("parse toml error: {0}")]
-    ParseToml(#[from] toml::de::Error),
+    #[error("parse toml error in {path}: {source}")]
+    ParseToml {
+        path: PathBuf,
+        source: toml::de::Error,
+    },
     #[error("failed to serialize config TOML: {0}")]
     SerializeToml(String),
     #[error("invalid config path")]
@@ -54,7 +57,11 @@ impl Context {
             });
         }
         let content = fs::read_to_string(&path)?;
-        let config: ContextConfig = toml::from_str(&content)?;
+        let config: ContextConfig =
+            toml::from_str(&content).map_err(|e| ContextError::ParseToml {
+                path: path.clone(),
+                source: e,
+            })?;
         let override_name = override_name.map(|n| n.to_string());
 
         if let Some(name) = override_name.as_deref() {
@@ -113,6 +120,10 @@ impl Context {
         } else {
             Err(ContextError::ProfileNotFound(name.to_string()))
         }
+    }
+
+    pub fn get_config_path(&self) -> &PathBuf {
+        &self.path
     }
 
     fn write_to_file(&self) -> Result<(), ContextError> {
