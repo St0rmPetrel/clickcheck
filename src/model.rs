@@ -105,6 +105,7 @@ impl From<cli::ErrorFilterArgs> for ErrorsFilter {
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct ContextProfile {
     pub user: String,
+    #[serde(skip)]
     pub password: String,
     pub urls: Vec<String>,
     pub accept_invalid_certificate: bool,

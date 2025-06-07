@@ -79,7 +79,7 @@ fn resolve_profile(
     cli: &cli::ConnectArgs,
     ctx: &context::Context,
 ) -> Result<model::ContextProfile, String> {
-    if let Some(profile) = ctx.profile() {
+    if let Some(profile) = ctx.profile().map_err(|e| format!("error: {e}"))? {
         let mut profile = profile.clone();
         if !cli.urls.is_empty() {
             profile.urls = cli.urls.clone();

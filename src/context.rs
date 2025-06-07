@@ -4,6 +4,8 @@ use std::io::Write;
 use std::path::PathBuf;
 use thiserror::Error;
 
+const SERVICE_NAME: &str = "ch-query-analyzer";
+
 #[derive(Debug, Error)]
 pub enum ContextError {
     #[error("read config error: {0}")]
@@ -21,6 +23,8 @@ pub enum ContextError {
     PersistTempFile(#[from] tempfile::PersistError),
     #[error("context profile '{0}' not found")]
     ProfileNotFound(String),
+    #[error("keyring error: {0}")]
+    KeyringError(#[from] keyring::Error),
 }
 
 #[derive(Debug)]
@@ -36,34 +40,32 @@ impl Context {
         config_path: Option<&PathBuf>,
         override_name: Option<&str>,
     ) -> Result<Self, ContextError> {
-        let path = match config_path {
-            Some(p) => p.clone(),
-            None => {
-                let default_dir = dirs_next::config_dir()
+        let path = config_path.map_or_else(
+            || -> Result<PathBuf, ContextError> {
+                let path = dirs_next::config_dir()
                     .ok_or(ContextError::InvalidPath)?
-                    .join("ch-query-analyzer");
-
-                // Создаём директорию при необходимости
-                std::fs::create_dir_all(&default_dir)?;
-
-                default_dir.join("config.toml")
-            }
-        };
-        if !path.exists() {
-            return Ok(Self {
-                path,
-                config: ContextConfig::default(),
-                override_name: None,
-            });
+                    .join("ch-query-analyzer")
+                    .join("config.toml");
+                Ok(path)
+            },
+            |p| Ok(p.clone()),
+        )?;
+        // Создаём директорию при необходимости
+        if let Some(parent) = path.parent() {
+            std::fs::create_dir_all(parent)?;
         }
-        let content = fs::read_to_string(&path)?;
-        let config: ContextConfig =
+
+        let config = if path.exists() {
+            let content = fs::read_to_string(&path)?;
             toml::from_str(&content).map_err(|e| ContextError::ParseToml {
                 path: path.clone(),
                 source: e,
-            })?;
-        let override_name = override_name.map(|n| n.to_string());
+            })?
+        } else {
+            ContextConfig::default()
+        };
 
+        let override_name = override_name.map(|n| n.to_string());
         if let Some(name) = override_name.as_deref() {
             if !config.profiles.contains_key(name) {
                 return Err(ContextError::ProfileNotFound(name.to_string()));
@@ -85,18 +87,18 @@ impl Context {
     pub fn active_profile_name(&self) -> Option<&str> {
         self.override_name
             .as_deref()
-            .or_else(|| self.config.current.as_deref())
+            .or(self.config.current.as_deref())
     }
 
-    pub fn profile(&self) -> Option<&ContextProfile> {
-        let name = self
-            .override_name
-            .as_deref()
-            .or_else(|| self.config.current.as_deref())?;
-        self.config.profiles.get(name)
+    pub fn profile(&self) -> Result<Option<ContextProfile>, ContextError> {
+        self.active_profile_name()
+            .map(|name| self.get_profile(name))
+            .transpose()
     }
 
     pub fn set_profile(&mut self, profile: ContextProfile, name: &str) -> Result<(), ContextError> {
+        self.store_password(name, &profile.password)?;
+
         self.config.profiles.insert(name.to_string(), profile);
         self.write_to_file()?;
 
@@ -115,16 +117,22 @@ impl Context {
     }
 
     pub fn get_profile(&self, name: &str) -> Result<ContextProfile, ContextError> {
-        if let Some(profile) = self.config.profiles.get(name) {
-            Ok(profile.clone())
-        } else {
-            Err(ContextError::ProfileNotFound(name.to_string()))
-        }
+        let mut profile = self
+            .config
+            .profiles
+            .get(name)
+            .ok_or_else(|| ContextError::ProfileNotFound(name.to_string()))?
+            .clone();
+
+        profile.password = self.get_password(name)?;
+        Ok(profile)
     }
 
     pub fn get_config_path(&self) -> &PathBuf {
         &self.path
     }
+
+    // --- Приватные вспомогательные методы ---
 
     fn write_to_file(&self) -> Result<(), ContextError> {
         let toml = toml::to_string_pretty(&self.config)
@@ -142,5 +150,17 @@ impl Context {
 
         tmp_file.persist(&self.path)?;
         Ok(())
+    }
+
+    fn store_password(&self, profile_name: &str, password: &str) -> Result<(), ContextError> {
+        let entry = keyring::Entry::new(SERVICE_NAME, profile_name)?;
+        entry.set_password(password)?;
+        Ok(())
+    }
+
+    fn get_password(&self, profile_name: &str) -> Result<String, ContextError> {
+        let entry = keyring::Entry::new(SERVICE_NAME, profile_name)?;
+        let password = entry.get_password()?;
+        Ok(password)
     }
 }
