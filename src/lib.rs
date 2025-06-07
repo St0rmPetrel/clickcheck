@@ -87,8 +87,8 @@ fn resolve_profile(
         if let Some(user) = cli.user.as_deref() {
             profile.user = user.to_string();
         }
-        if let Some(password) = cli.password.as_deref() {
-            profile.password = password.to_string();
+        if let Some(password) = cli.password.clone() {
+            profile.password = password;
         }
         if let Some(_) = cli.accept_invalid_certificate {
             profile.accept_invalid_certificate = true
@@ -104,7 +104,10 @@ fn resolve_profile(
         .user
         .clone()
         .ok_or("missing `--user`: supply it or set a context")?;
-    let password = cli.password.clone().unwrap_or("".to_string());
+    let password = cli
+        .password
+        .clone()
+        .unwrap_or(secrecy::SecretString::new("".to_string().into()));
     let accept_invalid_certificate = if let Some(_) = cli.accept_invalid_certificate {
         true
     } else {

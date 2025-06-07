@@ -63,13 +63,12 @@ pub async fn handle_context(
         }
 
         cli::ContextCommand::Show { name, show_secrets } => {
-            let mut profile = ctx
+            let profile = ctx
                 .get_profile(name)
                 .map_err(|e| format!("show profile error: {}", e))?;
-            if !show_secrets {
-                profile.password = "[REDACTED]".to_string(); // Маскируем пароль
-            }
-            output::print_context_profile(&profile, out);
+
+            let printable = profile.to_printable(*show_secrets);
+            output::print_context_profile(&printable, out);
         }
 
         cli::ContextCommand::Set { command } => match command {

@@ -1,4 +1,4 @@
-use crate::model::{ContextProfile, Error, OutputFormat as Format, QueryLog};
+use crate::model::{Error, OutputFormat as Format, PrintableContextProfile, QueryLog};
 use serde::Serialize;
 
 mod text;
@@ -84,7 +84,7 @@ pub fn print_context_config_path(path: &std::path::PathBuf, format: Format) {
     }
 }
 
-pub fn print_context_profile(profile: &ContextProfile, format: Format) {
+pub fn print_context_profile(profile: &PrintableContextProfile, format: Format) {
     match format {
         Format::Text => text::print_context_profile(profile),
         Format::Json | Format::Yaml => serialize_and_print(&profile, format, "context profile"),

@@ -8,6 +8,7 @@ use hyper_tls::native_tls;
 use hyper_util::client::legacy::Client as HyperClient;
 use hyper_util::client::legacy::connect::HttpConnector;
 use hyper_util::rt::TokioExecutor;
+use secrecy::ExposeSecret;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 use thiserror::Error;
@@ -26,7 +27,7 @@ pub struct Client {
 pub struct Config<'a> {
     pub urls: &'a [String],
     pub user: &'a str,
-    pub password: &'a str,
+    pub password: &'a secrecy::SecretString,
     pub danger_accept_invalid_certs: bool,
 }
 
@@ -83,7 +84,7 @@ impl Client {
                 }
                 .with_url(url)
                 .with_user(cfg.user)
-                .with_password(cfg.password)
+                .with_password(cfg.password.expose_secret())
                 .with_database("system");
                 Ok::<ChClient, ClientError>(node)
             })

@@ -80,8 +80,8 @@ pub struct ConnectArgs {
     pub user: Option<String>,
 
     /// ClickHouse password
-    #[arg(short = 'p', long)]
-    pub password: Option<String>,
+    #[arg(short = 'p', long, value_parser = parse_secret_arg)]
+    pub password: Option<secrecy::SecretString>,
 
     /// Accept invalid (e.g., self-signed) TLS certificates when connecting over HTTPS.
     ///
@@ -177,8 +177,8 @@ pub enum ContextSetCommand {
         user: String,
 
         /// ClickHouse password
-        #[arg(short = 'p', long, default_value = "")]
-        password: String,
+        #[arg(short = 'p', long, value_parser = parse_secret_arg)]
+        password: secrecy::SecretString,
 
         /// Accept invalid (e.g., self-signed) TLS certificates when connecting over HTTPS.
         ///
@@ -205,4 +205,9 @@ fn parse_datetime(s: &str) -> Result<OffsetDateTime, String> {
     }
 
     Err("Invalid datetime format. Use RFC3339 (e.g. 2024-05-01T10:30:00Z) or YYYY-MM-DD.".into())
+}
+
+/// Кастомный парсер для безопасного чтения пароля
+fn parse_secret_arg(s: &str) -> Result<secrecy::SecretString, String> {
+    Ok(secrecy::SecretString::new(s.to_string().into()))
 }

@@ -1,5 +1,6 @@
 use clap::ValueEnum;
 use clickhouse::Row;
+use secrecy::ExposeSecret;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::time::Duration;
@@ -106,9 +107,35 @@ impl From<cli::ErrorFilterArgs> for ErrorsFilter {
 pub struct ContextProfile {
     pub user: String,
     #[serde(skip)]
-    pub password: String,
+    pub password: secrecy::SecretString,
     pub urls: Vec<String>,
     pub accept_invalid_certificate: bool,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PrintableContextProfile<'a> {
+    pub user: &'a str,
+    pub password: &'a str,
+    pub urls: &'a Vec<String>,
+    pub accept_invalid_certificate: bool,
+}
+
+impl ContextProfile {
+    pub fn to_printable(&self, show_secrets: bool) -> PrintableContextProfile<'_> {
+        let password = if show_secrets {
+            // SAFETY: this is only done at the very edge of your app
+            // and never stored back into your model.
+            self.password.expose_secret()
+        } else {
+            "[REDACTED]"
+        };
+        PrintableContextProfile {
+            user: &self.user,
+            password,
+            urls: &self.urls,
+            accept_invalid_certificate: self.accept_invalid_certificate,
+        }
+    }
 }
 
 #[derive(Debug, Default, Serialize, Deserialize)]

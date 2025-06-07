@@ -1,4 +1,5 @@
 use crate::model::{ContextConfig, ContextProfile};
+use secrecy::ExposeSecret;
 use std::fs;
 use std::io::Write;
 use std::path::PathBuf;
@@ -152,15 +153,19 @@ impl Context {
         Ok(())
     }
 
-    fn store_password(&self, profile_name: &str, password: &str) -> Result<(), ContextError> {
+    fn store_password(
+        &self,
+        profile_name: &str,
+        password: &secrecy::SecretString,
+    ) -> Result<(), ContextError> {
         let entry = keyring::Entry::new(SERVICE_NAME, profile_name)?;
-        entry.set_password(password)?;
+        entry.set_password(password.expose_secret())?;
         Ok(())
     }
 
-    fn get_password(&self, profile_name: &str) -> Result<String, ContextError> {
+    fn get_password(&self, profile_name: &str) -> Result<secrecy::SecretString, ContextError> {
         let entry = keyring::Entry::new(SERVICE_NAME, profile_name)?;
         let password = entry.get_password()?;
-        Ok(password)
+        Ok(secrecy::SecretString::new(password.into()))
     }
 }

@@ -108,7 +108,7 @@ pub fn print_context_config_path(path: &std::path::PathBuf) {
     println!("{}", path.display());
 }
 
-pub fn print_context_profile(profile: &model::ContextProfile) {
+pub fn print_context_profile(profile: &model::PrintableContextProfile) {
     println!("Profile:");
     println!("  URLs: {}", profile.urls.join(", "));
     println!("  User: {}", profile.user);
