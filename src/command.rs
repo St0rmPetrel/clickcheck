@@ -76,21 +76,24 @@ pub async fn handle_context(
                 ctx.set_default(name)
                     .map_err(|e| format!("set current error: {}", e))?;
             }
-            cli::ContextSetCommand::Profile {
-                name,
-                urls,
-                user,
-                password,
-                accept_invalid_certificate,
-            } => {
+            cli::ContextSetCommand::Profile(args) => {
+                let user = args.user.clone();
+                let password = if args.interactive_password {
+                    let password =
+                        rpassword::prompt_password(format!("ClickHouse {user} password: "))
+                            .map_err(|e| format!("read password from prompt: {e}"))?;
+                    secrecy::SecretString::new(password.into())
+                } else {
+                    args.password.clone().unwrap()
+                };
                 ctx.set_profile(
                     model::ContextProfile {
-                        user: user.clone(),
-                        password: password.clone(),
-                        urls: urls.clone(),
-                        accept_invalid_certificate: accept_invalid_certificate.clone(),
+                        user,
+                        password,
+                        urls: args.urls.clone(),
+                        accept_invalid_certificate: args.accept_invalid_certificate.clone(),
                     },
-                    name,
+                    &args.name,
                 )
                 .map_err(|e| format!("set profile error: {}", e))?;
             }

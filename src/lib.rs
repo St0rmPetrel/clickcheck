@@ -12,9 +12,6 @@ use cli::{CliArgs, Command};
 pub async fn run() -> Result<(), String> {
     let cli_args = CliArgs::parse();
 
-    let mut ctx = context::Context::new(cli_args.config.as_ref(), cli_args.context.as_deref())
-        .map_err(|e| format!("context error: {e}"))?;
-
     match &cli_args.command {
         Command::Queries {
             conn,
@@ -22,6 +19,8 @@ pub async fn run() -> Result<(), String> {
             filter,
             limit,
         } => {
+            let ctx = context::Context::new(cli_args.config.as_ref(), cli_args.context.as_deref())
+                .map_err(|e| format!("context error: {e}"))?;
             let profile = resolve_profile(&conn, &ctx)?;
             let client = client::Client::new(client::Config {
                 urls: &profile.urls,
@@ -46,6 +45,8 @@ pub async fn run() -> Result<(), String> {
             filter,
             limit,
         } => {
+            let ctx = context::Context::new(cli_args.config.as_ref(), cli_args.context.as_deref())
+                .map_err(|e| format!("context error: {e}"))?;
             let profile = resolve_profile(&conn, &ctx)?;
             let client = client::Client::new(client::Config {
                 urls: &profile.urls,
@@ -65,6 +66,9 @@ pub async fn run() -> Result<(), String> {
             .await?
         }
         Command::Context { command } => {
+            let mut ctx =
+                context::Context::new(cli_args.config.as_ref(), cli_args.context.as_deref())
+                    .map_err(|e| format!("context error: {e}"))?;
             command::handle_context(&mut ctx, command, cli_args.out).await?
         }
     }
@@ -89,6 +93,12 @@ fn resolve_profile(
         }
         if let Some(password) = cli.password.clone() {
             profile.password = password;
+        }
+        if cli.interactive_password {
+            let user = &profile.user;
+            let password = rpassword::prompt_password(format!("ClickHouse {user} password: "))
+                .map_err(|e| format!("read password from prompt: {e}"))?;
+            profile.password = secrecy::SecretString::new(password.into());
         }
         if let Some(_) = cli.accept_invalid_certificate {
             profile.accept_invalid_certificate = true

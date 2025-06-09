@@ -83,6 +83,10 @@ pub struct ConnectArgs {
     #[arg(short = 'p', long, value_parser = parse_secret_arg)]
     pub password: Option<secrecy::SecretString>,
 
+    /// ClickHouse password from interactive prompt
+    #[arg(short = 'i', long, conflicts_with = "password")]
+    pub interactive_password: bool,
+
     /// Accept invalid (e.g., self-signed) TLS certificates when connecting over HTTPS.
     ///
     /// This option is useful when connecting to ClickHouse instances with self-signed
@@ -164,33 +168,41 @@ pub enum ContextCommand {
 #[derive(Subcommand)]
 pub enum ContextSetCommand {
     /// Create or update a context profile
-    Profile {
-        /// The name of the profile to create or update
-        name: String,
-
-        /// ClickHouse node URLs
-        #[arg(short = 'U', long = "url", required = true)]
-        urls: Vec<String>,
-
-        /// ClickHouse username
-        #[arg(short = 'u', long, required = true)]
-        user: String,
-
-        /// ClickHouse password
-        #[arg(short = 'p', long, value_parser = parse_secret_arg)]
-        password: secrecy::SecretString,
-
-        /// Accept invalid (e.g., self-signed) TLS certificates when connecting over HTTPS.
-        ///
-        /// This option is useful when connecting to ClickHouse instances with self-signed
-        /// or untrusted certificates. It **disables certificate validation**, which can be
-        /// helpful for development or internal environments, but is **not recommended for production**
-        /// due to potential security risks.
-        #[arg(long, default_value = "false")]
-        accept_invalid_certificate: bool,
-    },
+    Profile(SetProfileArgs),
     /// Set the stored default context to an existing profile
     Current { name: String },
+}
+
+#[derive(Args)]
+#[command(group( ArgGroup::new("auth") .args(["password", "interactive_password"]) .required(true)))]
+pub struct SetProfileArgs {
+    /// The name of the profile to create or update
+    pub name: String,
+
+    /// ClickHouse node URLs
+    #[arg(short = 'U', long = "url", required = true)]
+    pub urls: Vec<String>,
+
+    /// ClickHouse username
+    #[arg(short = 'u', long, required = true)]
+    pub user: String,
+
+    /// ClickHouse password (plaintext)
+    #[arg( short = 'p', long, value_parser = parse_secret_arg, group = "auth")]
+    pub password: Option<secrecy::SecretString>,
+
+    /// Get password via interactive prompt
+    #[arg(short = 'i', long, group = "auth")]
+    pub interactive_password: bool,
+
+    /// Accept invalid (e.g., self-signed) TLS certificates when connecting over HTTPS.
+    ///
+    /// This option is useful when connecting to ClickHouse instances with self-signed
+    /// or untrusted certificates. It **disables certificate validation**, which can be
+    /// helpful for development or internal environments, but is **not recommended for production**
+    /// due to potential security risks.
+    #[arg(long, default_value_t = false)]
+    pub accept_invalid_certificate: bool,
 }
 
 fn parse_datetime(s: &str) -> Result<OffsetDateTime, String> {

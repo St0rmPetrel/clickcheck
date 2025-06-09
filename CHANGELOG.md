@@ -59,7 +59,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Enhanced security for `context show` command
   - Passwords are now masked by default (`[REDACTED]`)
   - Requires new `--show-secrets` flag to reveal passwords
-[ ] New `--interactive-password` flag to explicitly request password input via secure prompt:
+- New `--interactive-password` flag to explicitly request password input via secure prompt:
 
 bash
 
