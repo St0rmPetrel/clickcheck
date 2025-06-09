@@ -47,12 +47,22 @@ impl Analyzer {
                 existing.memory_usage += log.memory_usage;
                 existing.user_time_us += log.user_time_us;
                 existing.system_time_us += log.system_time_us;
-                if log.max_event_time > existing.max_event_time {
-                    existing.max_event_time = log.max_event_time;
-                }
-                if log.min_event_time < existing.min_event_time {
-                    existing.min_event_time = log.min_event_time;
-                }
+
+                // Time bounds
+                existing.max_event_time = existing.max_event_time.max(log.max_event_time);
+                existing.min_event_time = existing.min_event_time.min(log.min_event_time);
+
+                existing.users.extend(log.users.iter().cloned());
+                existing.users.sort_unstable();
+                existing.users.dedup();
+
+                existing.databases.extend(log.databases.iter().cloned());
+                existing.databases.sort_unstable();
+                existing.databases.dedup();
+
+                existing.tables.extend(log.tables.iter().cloned());
+                existing.tables.sort_unstable();
+                existing.tables.dedup();
 
                 // Композитные показатели
                 existing.io_impact += log.io_impact;

@@ -142,6 +142,9 @@ impl Client {
                sum(memory_usage) AS memory_usage,
                sum(ProfileEvents['UserTimeMicroseconds']) AS user_time_us,
                sum(ProfileEvents['SystemTimeMicroseconds']) AS system_time_us,
+               groupUniqArray(user) AS users,
+               arrayDistinct(arrayFlatten(groupArray(databases))) AS databases,
+               arrayDistinct(arrayFlatten(groupArray(tables))) AS tables,
 
                read_rows * 100 + read_bytes * 1 AS io_impact,
                user_time_us * 10_000 + system_time_us * 10_000 AS cpu_impact,

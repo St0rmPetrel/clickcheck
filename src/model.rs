@@ -23,6 +23,9 @@ pub struct QueryLog {
     pub memory_usage: u64,
     pub user_time_us: u64,
     pub system_time_us: u64,
+    pub users: Vec<String>,
+    pub databases: Vec<String>,
+    pub tables: Vec<String>,
     // Композитные показатели
     pub io_impact: u64,     // Специализированный I/O вес
     pub cpu_impact: u64,    // Специализированный CPU вес

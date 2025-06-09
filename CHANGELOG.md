@@ -9,11 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Time window support for `queries` command via `--last` duration flag (e.g., `--last 1h`)
-- Threshold filters for `queries` command:
+[ ] Threshold filters for `queries` command:
   - `--min-duration` (e.g., `100ms`)
   - `--min-rows` (e.g., `1000`)
   - `--min-bytes` (e.g., `1000000`)
-- New filters for `queries` command:
+[ ] New filters for `queries` command:
   - `--user` to filter by user accounts
   - `--database` to filter by database names
   - `--table` to filter by table names
@@ -59,6 +59,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Enhanced security for `context show` command
   - Passwords are now masked by default (`[REDACTED]`)
   - Requires new `--show-secrets` flag to reveal passwords
+[ ] New `--interactive-password` flag to explicitly request password input via secure prompt:
+
+bash
+
 
 ## [0.1.0] - 2025-05-31
 
