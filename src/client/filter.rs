@@ -8,6 +8,9 @@ pub struct QueryLogFilter {
     pub from: Option<OffsetDateTime>,
     pub to: Option<OffsetDateTime>,
     pub last: Option<Duration>,
+    pub users: Vec<String>,
+    pub databases: Vec<String>,
+    pub tables: Vec<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -15,6 +18,7 @@ pub enum QueryParam {
     DateTime(OffsetDateTime),
     UInt64(u64),
     Int32(i32),
+    String(String),
 }
 
 impl QueryParam {
@@ -27,6 +31,7 @@ impl QueryParam {
             }
             QueryParam::UInt64(v) => Ok(format!("{}", v)),
             QueryParam::Int32(v) => Ok(format!("{}", v)),
+            QueryParam::String(v) => Ok(v.clone()),
         }
     }
 }
@@ -34,22 +39,30 @@ impl QueryParam {
 impl QueryLogFilter {
     /// Собирает SQL-фрагменты WHERE и возвращает (условие, параметры)
     pub fn build_where(&self) -> (String, Vec<QueryParam>) {
-        let mut clauses = Vec::new();
+        let mut clauses: Vec<String> = Vec::new();
         let mut params = Vec::new();
 
         if let Some(from) = self.from {
-            clauses.push("event_time >= toDateTime(?, 'UTC')");
+            clauses.push("event_time >= toDateTime(?, 'UTC')".to_string());
             params.push(QueryParam::DateTime(from));
         }
         if let Some(last) = self.last {
             let now = OffsetDateTime::now_utc();
             let threshold = now - last;
-            clauses.push("event_time >= toDateTime(?, 'UTC')");
+            clauses.push("event_time >= toDateTime(?, 'UTC')".to_string());
             params.push(QueryParam::DateTime(threshold));
         }
         if let Some(to) = self.to {
-            clauses.push("event_time < toDateTime(?, 'UTC')");
+            clauses.push("event_time < toDateTime(?, 'UTC')".to_string());
             params.push(QueryParam::DateTime(to));
+        }
+
+        if !self.users.is_empty() {
+            let placeholders = vec!["?"; self.users.len()].join(", ");
+            clauses.push(format!("user IN ({placeholders})"));
+            self.users.iter().for_each(|user| {
+                params.push(QueryParam::String(user.clone()));
+            });
         }
 
         let where_clause = if clauses.is_empty() {
@@ -60,14 +73,46 @@ impl QueryLogFilter {
 
         (where_clause, params)
     }
+
+    /// Собирает SQL-фрагменты HAVING и возвращает (условие, параметры)
+    pub fn build_having(&self) -> (String, Vec<QueryParam>) {
+        let mut clauses = Vec::new();
+        let mut params = Vec::new();
+
+        if !self.tables.is_empty() {
+            let placeholders = vec!["?"; self.tables.len()].join(", ");
+            clauses.push(format!("hasAny(tables, [{placeholders}])"));
+            self.tables.iter().for_each(|table| {
+                params.push(QueryParam::String(table.clone()));
+            });
+        }
+        if !self.databases.is_empty() {
+            let placeholders = vec!["?"; self.databases.len()].join(", ");
+            clauses.push(format!("hasAny(databases, [{placeholders}])"));
+            self.databases.iter().for_each(|database| {
+                params.push(QueryParam::String(database.clone()));
+            });
+        }
+
+        let having_clause = if clauses.is_empty() {
+            String::new()
+        } else {
+            format!("AND {}", clauses.join(" AND "))
+        };
+
+        (having_clause, params)
+    }
 }
 
 impl From<model::QueriesFilter> for QueryLogFilter {
-    fn from(args: model::QueriesFilter) -> Self {
+    fn from(filter: model::QueriesFilter) -> Self {
         Self {
-            from: args.from,
-            to: args.to,
-            last: args.last,
+            from: filter.from,
+            to: filter.to,
+            last: filter.last,
+            users: filter.users,
+            tables: filter.tables,
+            databases: filter.databases,
         }
     }
 }

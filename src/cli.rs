@@ -125,6 +125,18 @@ pub struct QueriesFilterArgs {
         group = "from_or_last"
     )]
     pub last: Option<std::time::Duration>,
+
+    /// Filter by the user who executed the query. Can be specified multiple times.
+    #[arg(long = "query-user")]
+    pub query_user: Vec<String>,
+
+    /// Filter by database name. Can be specified multiple times.
+    #[arg(long)]
+    pub database: Vec<String>,
+
+    /// Filter by table name. Can be specified multiple times.
+    #[arg(long)]
+    pub table: Vec<String>,
 }
 
 #[derive(Args, Debug, Clone)]

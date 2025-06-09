@@ -62,6 +62,9 @@ pub struct QueriesFilter {
     pub from: Option<OffsetDateTime>,
     pub to: Option<OffsetDateTime>,
     pub last: Option<Duration>,
+    pub users: Vec<String>,
+    pub databases: Vec<String>,
+    pub tables: Vec<String>,
 }
 
 #[derive(Debug)]
@@ -92,6 +95,9 @@ impl From<cli::QueriesFilterArgs> for QueriesFilter {
             from: args.from,
             to: args.to,
             last: args.last,
+            users: args.query_user,
+            tables: args.table,
+            databases: args.database,
         }
     }
 }

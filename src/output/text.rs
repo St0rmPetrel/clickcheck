@@ -3,7 +3,7 @@ use ascii_table::AsciiTable;
 use humansize::{DECIMAL, format_size};
 use time::format_description::well_known::Rfc3339;
 
-const MAX_COLUMN_LEN: usize = 30;
+const MAX_COLUMN_LEN: usize = 50;
 
 /// Clean and shorten string for display in tables.
 /// - Removes newlines and trims whitespace

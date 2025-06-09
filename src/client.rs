@@ -128,7 +128,8 @@ impl Client {
         filter: QueryLogFilter,
         sender: Sender<QueryLog>,
     ) -> Result<(), ClientError> {
-        let (where_clause, params) = filter.build_where();
+        let (where_clause, where_params) = filter.build_where();
+        let (having_clause, having_params) = filter.build_having();
         let sql = format!(
             r#"
             SELECT
@@ -153,8 +154,12 @@ impl Client {
                io_impact + cpu_impact + memory_impact + time_impact AS total_impact
             FROM query_log
             WHERE type != 'QueryStart' AND query_kind = 'Select' {where_clause}
-            GROUP BY normalized_query_hash"#
+            GROUP BY normalized_query_hash
+            HAVING 1 = 1
+              {having_clause}
+            "#,
         );
+        let params = [where_params, having_params].concat();
 
         self.execute_on_all_nodes(sender, move |node| {
             build_query_with_params(node, &sql, &params)
