@@ -84,6 +84,21 @@ impl QueryLogFilter {
             params.push(QueryParam::UInt64(min_query_duration));
         }
 
+        if !self.tables.is_empty() {
+            let placeholders = vec!["?"; self.tables.len()].join(", ");
+            clauses.push(format!("hasAny(query_log.tables, [{placeholders}])"));
+            self.tables.iter().for_each(|table| {
+                params.push(QueryParam::String(table.clone()));
+            });
+        }
+        if !self.databases.is_empty() {
+            let placeholders = vec!["?"; self.databases.len()].join(", ");
+            clauses.push(format!("hasAny(query_log.databases, [{placeholders}])"));
+            self.databases.iter().for_each(|database| {
+                params.push(QueryParam::String(database.clone()));
+            });
+        }
+
         let where_clause = if clauses.is_empty() {
             String::new()
         } else {
@@ -91,35 +106,6 @@ impl QueryLogFilter {
         };
 
         (where_clause, params)
-    }
-
-    /// Собирает SQL-фрагменты HAVING и возвращает (условие, параметры)
-    pub fn build_having(&self) -> (String, Vec<QueryParam>) {
-        let mut clauses = Vec::new();
-        let mut params = Vec::new();
-
-        if !self.tables.is_empty() {
-            let placeholders = vec!["?"; self.tables.len()].join(", ");
-            clauses.push(format!("hasAny(tables, [{placeholders}])"));
-            self.tables.iter().for_each(|table| {
-                params.push(QueryParam::String(table.clone()));
-            });
-        }
-        if !self.databases.is_empty() {
-            let placeholders = vec!["?"; self.databases.len()].join(", ");
-            clauses.push(format!("hasAny(databases, [{placeholders}])"));
-            self.databases.iter().for_each(|database| {
-                params.push(QueryParam::String(database.clone()));
-            });
-        }
-
-        let having_clause = if clauses.is_empty() {
-            String::new()
-        } else {
-            format!("AND {}", clauses.join(" AND "))
-        };
-
-        (having_clause, params)
     }
 }
 
