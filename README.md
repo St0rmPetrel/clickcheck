@@ -1,52 +1,73 @@
-# Roadmap for clickcheck
+# clickcheck
 
-## 🚀 Planned & Suggested Features
+**clickcheck** — инструмент для анализа ClickHouse: 
+Помогает *DBA* быстро обнаруживать и устранять проблемы.
 
-### “Get” & “Stats” Subcommands on queries
-- clickcheck queries get <QUERY_ID>
-  - Fetch single system.query_log row by query_id
-  - Show full SQL, ProfileEvents, per-query Settings
+На текущий момент ищет тяжелые запросы и ошибки.
+В потенциале будет также искать неэффективные запросы, аномалии, пики нагрузки, рост хранилища и другие проблемы.
 
-- clickcheck queries stats [--date X] [--user Y] [--failed]
-  - Single aggregated query: total count, unique queries, success vs failed, I/O & memory summaries
+---
+
+## 🚀 Ключевые возможности
+
+- Анализ `query_log`: группировка запросов по fingerprint
+- Многоформатный вывод: текст, JSON, YAML
+- Управление профилями подключения (контексты)
+- Сбор данных со всех нод кластера (или указанных) с последующей агрегацией на стороне `clickcheck`
+
+## 🛠️ Установка
+
+```bash
+cargo install clickcheck
+```
+
+## ⚙️Использование
+
+Используйте `--help` для подробной справки по каждой команде:
+
+```bash
+clickcheck --help
+clickcheck queries --help
+clickcheck errors --help
+clickcheck context --help
+```
+
+Пример
+
+```bash
+clickcheck context set profile ch-hello -U 'https://my-ch-hello-node-1:8443' -U 'https://my-ch-hello-node-2:8443' -u 'hello_user' -i
+# Вводим ClickHouse hello_user password:
+clickcheck context set profile ch-bye -U 'https://my-ch-bye-node-1:8443' -u 'bye_user' -i
+# Вводим ClickHouse bye_user password:
+
+# Выставляем context по умолчанию
+clickcheck context set current ch-hello
+
+# Смотрим топ 5 тяжелых запросов на кластере ch-hello
+clickcheck queries --last 1hour
+# Смотрим топ 5 ошибок на ch-hello
+clickcheck errors
+
+# Смотрим топ 5 тяжелых запросов на кластере ch-bye
+clickcheck queries --last 1hour --context ch-bye
+```
+
+---
 
 
-### Smart Filters
-- Filter by **database** or **user**
-- Time windows (`--from`/`--to`, `--last 1h`)
-- Thresholds: `--min-duration`, `--min-rows`, `--min-bytes`, error patterns
+## 🎯 Roadmap
 
-### Specialized Weights
-- **CPU/Memory score**: weight = f(cpu_time, memory_usage)
-- **I/O score**: weight = f(read_bytes, written_bytes)
-- **Custom composite**: user-defined formulas (e.g. `2×IO + 1×CPU + 0.5×Memory`)
+### В разработке и планах
 
-### Advanced Analysis Modes
-- **Unstable queries**: high-variance detection
-- **Burst detection**: spikes in query frequency
-- **Anomaly detection**: statistical outliers, unusual patterns
-
-### Beyond Query Logs
-- **Storage growth**: inspect `system.parts` to find largest tables/partitions and predict growth
-- Merge spikes: analyze system.part_log for merge bursts
-
-### Export Integrations
-- Flamegraph integration: generate per-query flamegraphs or CPU profiles 
-
-## ✅ Already Implemented
-- **Multi-node input** support (analyze multiple ClickHouse nodes at once)
-- **Output formats**: Text, JSON, YAML
-- **Top N queries**: default sorted by weight, group by `normalized_query_hash`
-- **Flexible sorting**: top queries can be sorted by any field (e.g. `weight`, `cpu_time`, etc.)
-- **Context/profile system**:
-  - Named profiles (`dev`, `prod`, …) stored in `~/.config/clickcheck/config.toml`
-  - Each profile has:
-    - Multiple `urls` for the cluster
-    - `user` and `password`
-  - `clickcheck context set profile <NAME> …` to create/update
-  - `clickcheck context set current <NAME>` to choose default
-  - `--context <NAME>` override per-command
-- **Error-log Analysis (`errors` command)**
-  - Aggregate system.errors by code with counts, last time, message
-  - Filters: --last, --min-count, --code, --remote-only
-  - Display top errors in Text/JSON/YAML
+- “Get” & “Stats” Subcommands on queries
+  - clickcheck queries get <FINGERPRINT>
+  - clickcheck queries stats: Single aggregated query
+- Advanced Analysis Modes
+  - **Unstable queries**: high-variance detection
+  - **Burst detection**: spikes in query frequency
+  - **Anomaly detection**: statistical outliers, unusual patterns
+- Beyond Query Logs
+  - **Storage growth**: inspect `system.parts` to find largest tables/partitions and predict growth
+  - Merge spikes: analyze system.part_log for merge bursts
+- Export Integrations
+  - Flamegraph integration: generate per-query flamegraphs or CPU profiles 

@@ -12,7 +12,7 @@ use time::{Date, OffsetDateTime, Time};
 #[command(
     name = "clickcheck",
     version,
-    about = "Tool to analyze ClickHouse system tables, to detect potential issues for DBAs and SREs."
+    about = "Tool to analyze ClickHouse system tables, to detect potential issues for DBAs."
 )]
 pub struct CliArgs {
     /// Subcommands for different analysis modes
