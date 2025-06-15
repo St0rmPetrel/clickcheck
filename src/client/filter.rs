@@ -8,9 +8,14 @@ pub struct QueryLogFilter {
     pub from: Option<OffsetDateTime>,
     pub to: Option<OffsetDateTime>,
     pub last: Option<Duration>,
+
     pub users: Vec<String>,
     pub databases: Vec<String>,
     pub tables: Vec<String>,
+
+    pub min_query_duration: Option<std::time::Duration>,
+    pub min_read_rows: Option<u64>,
+    pub min_read_data: Option<bytesize::ByteSize>,
 }
 
 #[derive(Debug, Clone)]
@@ -43,17 +48,17 @@ impl QueryLogFilter {
         let mut params = Vec::new();
 
         if let Some(from) = self.from {
-            clauses.push("event_time >= toDateTime(?, 'UTC')".to_string());
+            clauses.push("event_time >= toDateTime(?, 'UTC')".to_owned());
             params.push(QueryParam::DateTime(from));
         }
         if let Some(last) = self.last {
             let now = OffsetDateTime::now_utc();
             let threshold = now - last;
-            clauses.push("event_time >= toDateTime(?, 'UTC')".to_string());
+            clauses.push("event_time >= toDateTime(?, 'UTC')".to_owned());
             params.push(QueryParam::DateTime(threshold));
         }
         if let Some(to) = self.to {
-            clauses.push("event_time < toDateTime(?, 'UTC')".to_string());
+            clauses.push("event_time < toDateTime(?, 'UTC')".to_owned());
             params.push(QueryParam::DateTime(to));
         }
 
@@ -63,6 +68,20 @@ impl QueryLogFilter {
             self.users.iter().for_each(|user| {
                 params.push(QueryParam::String(user.clone()));
             });
+        }
+        if let Some(min_read_rows) = self.min_read_rows {
+            clauses.push("read_rows >= ?".to_owned());
+            params.push(QueryParam::UInt64(min_read_rows));
+        }
+        if let Some(min_read_data) = self.min_read_data {
+            let min_read_bytes = min_read_data.as_u64();
+            clauses.push("read_bytes >= ?".to_owned());
+            params.push(QueryParam::UInt64(min_read_bytes));
+        }
+        if let Some(min_query_duration) = self.min_query_duration {
+            let min_query_duration = min_query_duration.as_millis() as u64;
+            clauses.push("query_duration_ms >= ?".to_owned());
+            params.push(QueryParam::UInt64(min_query_duration));
         }
 
         let where_clause = if clauses.is_empty() {
@@ -113,6 +132,9 @@ impl From<model::QueriesFilter> for QueryLogFilter {
             users: filter.users,
             tables: filter.tables,
             databases: filter.databases,
+            min_query_duration: filter.min_query_duration,
+            min_read_rows: filter.min_read_rows,
+            min_read_data: filter.min_read_data,
         }
     }
 }

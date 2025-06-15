@@ -17,12 +17,12 @@ pub struct QueryLog {
     pub max_event_time: OffsetDateTime,
     #[serde(with = "clickhouse::serde::time::datetime")]
     pub min_event_time: OffsetDateTime,
-    pub query_duration_ms: u64,
-    pub read_rows: u64,
-    pub read_bytes: u64,
-    pub memory_usage: u64,
-    pub user_time_us: u64,
-    pub system_time_us: u64,
+    pub total_query_duration_ms: u64,
+    pub total_read_rows: u64,
+    pub total_read_bytes: u64,
+    pub total_memory_usage: u64,
+    pub total_user_time_us: u64,
+    pub total_system_time_us: u64,
     pub users: Vec<String>,
     pub databases: Vec<String>,
     pub tables: Vec<String>,
@@ -65,6 +65,9 @@ pub struct QueriesFilter {
     pub users: Vec<String>,
     pub databases: Vec<String>,
     pub tables: Vec<String>,
+    pub min_query_duration: Option<std::time::Duration>,
+    pub min_read_rows: Option<u64>,
+    pub min_read_data: Option<bytesize::ByteSize>,
 }
 
 #[derive(Debug)]
@@ -98,6 +101,9 @@ impl From<cli::QueriesFilterArgs> for QueriesFilter {
             users: args.query_user,
             tables: args.table,
             databases: args.database,
+            min_query_duration: args.min_query_duration,
+            min_read_rows: args.min_read_rows,
+            min_read_data: args.min_read_data,
         }
     }
 }

@@ -1,6 +1,7 @@
 use crate::model::{OutputFormat, QueriesSortBy};
 use clap::{ArgGroup, Args, Parser, Subcommand};
 use std::path::PathBuf;
+use std::str::FromStr;
 use time::format_description::well_known::Rfc3339;
 use time::macros::format_description;
 use time::{Date, OffsetDateTime, Time};
@@ -129,14 +130,22 @@ pub struct QueriesFilterArgs {
     /// Filter by the user who executed the query. Can be specified multiple times.
     #[arg(long = "query-user")]
     pub query_user: Vec<String>,
-
     /// Filter by database name. Can be specified multiple times.
     #[arg(long)]
     pub database: Vec<String>,
-
     /// Filter by table name. Can be specified multiple times.
     #[arg(long)]
     pub table: Vec<String>,
+
+    /// Filter by minimum query duration (e.g., 100ms, 1s)
+    #[arg(long, value_parser = humantime::parse_duration)]
+    pub min_query_duration: Option<std::time::Duration>,
+    /// Filter by minimum number of rows read.
+    #[arg(long)]
+    pub min_read_rows: Option<u64>,
+    /// Filter by the minimum amount of data read (supports units like B, KB, MB, GiB)
+    #[arg(long, value_parser = bytesize::ByteSize::from_str)]
+    pub min_read_data: Option<bytesize::ByteSize>,
 }
 
 #[derive(Args, Debug, Clone)]

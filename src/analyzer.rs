@@ -41,12 +41,12 @@ impl Analyzer {
             .entry(log.normalized_query_hash)
             .and_modify(|existing| {
                 // Базовые метрики (raw values)
-                existing.query_duration_ms += log.query_duration_ms;
-                existing.read_rows += log.read_rows;
-                existing.read_bytes += log.read_bytes;
-                existing.memory_usage += log.memory_usage;
-                existing.user_time_us += log.user_time_us;
-                existing.system_time_us += log.system_time_us;
+                existing.total_query_duration_ms += log.total_query_duration_ms;
+                existing.total_read_rows += log.total_read_rows;
+                existing.total_read_bytes += log.total_read_bytes;
+                existing.total_memory_usage += log.total_memory_usage;
+                existing.total_user_time_us += log.total_user_time_us;
+                existing.total_system_time_us += log.total_system_time_us;
 
                 // Time bounds
                 existing.max_event_time = existing.max_event_time.max(log.max_event_time);
@@ -108,13 +108,13 @@ impl Analyzer {
                 QueriesSortBy::CPUImpact => q.cpu_impact,
                 QueriesSortBy::MemoryImpact => q.memory_impact,
                 QueriesSortBy::TimeImpact => q.time_impact,
-                QueriesSortBy::CpuTime => q.system_time_us + q.system_time_us,
-                QueriesSortBy::QueryDuration => q.query_duration_ms,
-                QueriesSortBy::ReadRows => q.read_rows,
-                QueriesSortBy::ReadBytes => q.read_bytes,
-                QueriesSortBy::MemoryUsage => q.memory_usage,
-                QueriesSortBy::UserTime => q.user_time_us,
-                QueriesSortBy::SystemTime => q.system_time_us,
+                QueriesSortBy::CpuTime => q.total_system_time_us + q.total_system_time_us,
+                QueriesSortBy::QueryDuration => q.total_query_duration_ms,
+                QueriesSortBy::ReadRows => q.total_read_rows,
+                QueriesSortBy::ReadBytes => q.total_read_bytes,
+                QueriesSortBy::MemoryUsage => q.total_memory_usage,
+                QueriesSortBy::UserTime => q.total_user_time_us,
+                QueriesSortBy::SystemTime => q.total_system_time_us,
             })
         });
         top_queries.truncate(limit);
