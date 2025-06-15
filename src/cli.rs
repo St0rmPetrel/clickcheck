@@ -6,12 +6,13 @@ use time::format_description::well_known::Rfc3339;
 use time::macros::format_description;
 use time::{Date, OffsetDateTime, Time};
 
-/// Analyze ClickHouse query_log for inefficient queries.
+/// Analyze ClickHouse query_log and system tables to detect inefficient queries,
+/// anomalies, storage growth, and other potential issues for DBAs and SREs.
 #[derive(Parser)]
 #[command(
-    name = "ch-query-analyzer",
+    name = "clickcheck",
     version,
-    about = "Analyze ClickHouse query_log and group similar queries by fingerprint"
+    about = "Tool to analyze ClickHouse system tables, to detect potential issues for DBAs and SREs."
 )]
 pub struct CliArgs {
     /// Subcommands for different analysis modes

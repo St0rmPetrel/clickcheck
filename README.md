@@ -1,13 +1,13 @@
-# Roadmap for ch-query-analyzer
+# Roadmap for clickcheck
 
 ## 🚀 Planned & Suggested Features
 
 ### “Get” & “Stats” Subcommands on queries
-- ch-query-analyzer queries get <QUERY_ID>
+- clickcheck queries get <QUERY_ID>
   - Fetch single system.query_log row by query_id
   - Show full SQL, ProfileEvents, per-query Settings
 
-- ch-query-analyzer queries stats [--date X] [--user Y] [--failed]
+- clickcheck queries stats [--date X] [--user Y] [--failed]
   - Single aggregated query: total count, unique queries, success vs failed, I/O & memory summaries
 
 
@@ -39,12 +39,12 @@
 - **Top N queries**: default sorted by weight, group by `normalized_query_hash`
 - **Flexible sorting**: top queries can be sorted by any field (e.g. `weight`, `cpu_time`, etc.)
 - **Context/profile system**:
-  - Named profiles (`dev`, `prod`, …) stored in `~/.config/ch-query-analyzer/config.toml`
+  - Named profiles (`dev`, `prod`, …) stored in `~/.config/clickcheck/config.toml`
   - Each profile has:
     - Multiple `urls` for the cluster
     - `user` and `password`
-  - `ch-query-analyzer context set profile <NAME> …` to create/update
-  - `ch-query-analyzer context set current <NAME>` to choose default
+  - `clickcheck context set profile <NAME> …` to create/update
+  - `clickcheck context set current <NAME>` to choose default
   - `--context <NAME>` override per-command
 - **Error-log Analysis (`errors` command)**
   - Aggregate system.errors by code with counts, last time, message

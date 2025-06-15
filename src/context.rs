@@ -5,7 +5,7 @@ use std::io::Write;
 use std::path::PathBuf;
 use thiserror::Error;
 
-const SERVICE_NAME: &str = "ch-query-analyzer";
+const SERVICE_NAME: &str = "clickcheck";
 
 #[derive(Debug, Error)]
 pub enum ContextError {
@@ -45,7 +45,7 @@ impl Context {
             || -> Result<PathBuf, ContextError> {
                 let path = dirs_next::config_dir()
                     .ok_or(ContextError::InvalidPath)?
-                    .join("ch-query-analyzer")
+                    .join(SERVICE_NAME)
                     .join("config.toml");
                 Ok(path)
             },

@@ -158,34 +158,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 
 [[package]]
-name = "ch-query-analyzer"
-version = "0.1.0"
-dependencies = [
- "ascii_table",
- "bytesize",
- "clap",
- "clickhouse",
- "dirs-next",
- "futures",
- "humansize",
- "humantime",
- "hyper-tls",
- "hyper-util",
- "keyring",
- "reqwest",
- "rpassword",
- "secrecy",
- "serde",
- "serde_json",
- "serde_yaml",
- "tempfile",
- "thiserror 2.0.12",
- "time",
- "tokio",
- "toml",
-]
-
-[[package]]
 name = "cityhash-rs"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -230,6 +202,34 @@ name = "clap_lex"
 version = "0.7.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f46ad14479a25103f283c0f10005961cf086d8dc42205bb44c46ac563475dca6"
+
+[[package]]
+name = "clickcheck"
+version = "0.1.0"
+dependencies = [
+ "ascii_table",
+ "bytesize",
+ "clap",
+ "clickhouse",
+ "dirs-next",
+ "futures",
+ "humansize",
+ "humantime",
+ "hyper-tls",
+ "hyper-util",
+ "keyring",
+ "reqwest",
+ "rpassword",
+ "secrecy",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+ "tempfile",
+ "thiserror 2.0.12",
+ "time",
+ "tokio",
+ "toml",
+]
 
 [[package]]
 name = "clickhouse"
