@@ -2,6 +2,7 @@
 
 ## В разработке и планах
 
+- `context remove <PROFILE_NAME>`
 - “Get” & “Stats” Subcommands on queries
   - `clickcheck queries get <FINGERPRINT>`
   - `clickcheck queries stats`: Single aggregated query
