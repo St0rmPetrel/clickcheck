@@ -1,3 +1,18 @@
+//! Command-line interface definition for `clickcheck`.
+//!
+//! This module defines the CLI structure using [`clap`] derive macros. It handles:
+//!
+//! - Global arguments like config file path, output format, and active context.
+//! - Subcommands:
+//!   - `queries`: Analyze and group normalized ClickHouse queries with filtering.
+//!   - `errors`: Display frequent ClickHouse query errors with filtering.
+//!   - `context`: Manage named connection profiles (contexts).
+//!
+//! This module also includes utility functions to parse human-friendly inputs
+//! like durations, dates, and secrets.
+//!
+//! The structure is designed to separate configuration parsing from execution logic,
+//! making it easier to test and extend.
 use crate::model::{OutputFormat, QueriesSortBy};
 use clap::{ArgGroup, Args, Parser, Subcommand};
 use std::path::PathBuf;
@@ -15,26 +30,28 @@ use time::{Date, OffsetDateTime, Time};
     about = "Tool to analyze ClickHouse system tables, to detect potential issues for DBAs."
 )]
 pub struct CliArgs {
-    /// Subcommands for different analysis modes
+    /// The subcommand to execute (e.g. `queries`, `errors`, `context`).
     #[command(subcommand)]
     pub command: Command,
 
-    /// Path to context config TOML file
+    /// Path to a context configuration TOML file.
     #[arg(long, global = true)]
     pub config: Option<PathBuf>,
 
     /// Optional override for which context (profile) to use.
-    /// If provided, this context name takes precedence over the stored default.
+    /// Takes precedence over the stored default.
     #[arg(long, global = true)]
     pub context: Option<String>,
 
+    /// Output format for results: text (default), json, or yaml.
     #[clap(long, global = true, default_value = "text")]
     pub out: OutputFormat,
 }
 
+/// Subcommands for different analysis modes.
 #[derive(Subcommand)]
 pub enum Command {
-    /// Show top queries group by normalized_query_hash
+    /// Show top queries grouped by normalized_query_hash, with optional filters and sorting.
     Queries {
         #[clap(flatten)]
         conn: ConnectArgs,
@@ -51,7 +68,7 @@ pub enum Command {
         limit: usize,
     },
 
-    /// Show top errors
+    /// Show top ClickHouse query errors with filtering options.
     Errors {
         #[clap(flatten)]
         conn: ConnectArgs,
@@ -64,13 +81,14 @@ pub enum Command {
         limit: usize,
     },
 
-    /// Manage connection contexts (profiles) for ClickHouse clusters.
+    /// Manage context profiles used for connecting to ClickHouse.
     Context {
         #[command(subcommand)]
         command: ContextCommand,
     },
 }
 
+/// Connection-related arguments used in multiple commands.
 #[derive(Args, Clone, Debug)]
 pub struct ConnectArgs {
     /// ClickHouse node URL (can be specified multiple times)
@@ -99,6 +117,8 @@ pub struct ConnectArgs {
     pub accept_invalid_certificate: Option<bool>,
 }
 
+/// Filters for narrowing down which queries to include in `queries` analysis.
+/// Supports both absolute date ranges and relative durations.
 #[derive(Args, Clone)]
 #[command(group(
     ArgGroup::new("from_or_last")
@@ -149,6 +169,7 @@ pub struct QueriesFilterArgs {
     pub min_read_data: Option<bytesize::ByteSize>,
 }
 
+/// Filters for the `errors` command.
 #[derive(Args, Debug, Clone)]
 pub struct ErrorFilterArgs {
     /// Only include errors that occurred within the last specified time period.
@@ -165,6 +186,7 @@ pub struct ErrorFilterArgs {
     pub code: Vec<i32>,
 }
 
+/// Subcommands for inspecting or modifying context profiles.
 #[derive(Subcommand)]
 pub enum ContextCommand {
     /// Show config file which store context profiles
@@ -187,6 +209,7 @@ pub enum ContextCommand {
     },
 }
 
+/// Subcommands to set context values (profile definition or current profile).
 #[derive(Subcommand)]
 pub enum ContextSetCommand {
     /// Create or update a context profile
@@ -195,6 +218,8 @@ pub enum ContextSetCommand {
     Current { name: String },
 }
 
+/// Arguments for creating or updating a context profile.
+/// Requires either a password or interactive prompt (enforced by ArgGroup).
 #[derive(Args)]
 #[command(group( ArgGroup::new("auth") .args(["password", "interactive_password"]) .required(true)))]
 pub struct SetProfileArgs {
@@ -227,6 +252,8 @@ pub struct SetProfileArgs {
     pub accept_invalid_certificate: bool,
 }
 
+/// Parses either a full RFC3339 timestamp or a YYYY-MM-DD date.
+/// Returns an `OffsetDateTime` set to midnight if only a date is provided.
 fn parse_datetime(s: &str) -> Result<OffsetDateTime, String> {
     if let Ok(dt) = OffsetDateTime::parse(s, &Rfc3339) {
         return Ok(dt);
@@ -241,7 +268,8 @@ fn parse_datetime(s: &str) -> Result<OffsetDateTime, String> {
     Err("Invalid datetime format. Use RFC3339 (e.g. 2024-05-01T10:30:00Z) or YYYY-MM-DD.".into())
 }
 
-/// Кастомный парсер для безопасного чтения пароля
+/// Parses a password from a CLI argument into a `SecretString`.
+/// Used to avoid leaking secrets in logs or stack traces.
 fn parse_secret_arg(s: &str) -> Result<secrecy::SecretString, String> {
     Ok(secrecy::SecretString::new(s.to_string().into()))
 }

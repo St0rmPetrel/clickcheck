@@ -1,3 +1,21 @@
+//! # Command Handlers
+//!
+//! This module contains top-level async functions that handle the main subcommands of the CLI tool:
+//!
+//! - `queries`: Analyzes heavy queries grouped by `normalized_query_hash`
+//! - `errors`: Displays top system errors grouped by error code
+//! - `context`: Manages ClickHouse connection profiles
+//!
+//! These functions coordinate between [`cli`] (input CLI arguments), internal logic, and [`output`] (printing).
+//!
+//! ## Architecture
+//!
+//! Each handler typically:
+//! 1. Starts a streaming task using the [`client`] module to read from ClickHouse system tables
+//! 2. Spawns an analyzer task from the [`analyzer`] module to consume and process the stream
+//! 3. Waits for both tasks concurrently via `tokio::join!`
+//! 4. Renders the result via the [`output`] module
+
 use crate::analyzer;
 use crate::cli;
 use crate::client;
@@ -6,7 +24,11 @@ use crate::model;
 use crate::output;
 use tokio::sync::mpsc;
 
-pub async fn handle_top_queries(
+/// Executes the `queries` command by analyzing heavy queries in `system.query_log`.
+///
+/// Streams log entries grouped by `normalized_query_hash` and prints top queries
+/// sorted by the selected impact metric.
+pub async fn top_queries(
     client: client::Client,
     req: model::TopQueriesRequest,
 ) -> Result<(), String> {
@@ -24,7 +46,10 @@ pub async fn handle_top_queries(
     Ok(())
 }
 
-pub async fn handle_top_errors(
+/// Executes the `errors` command by analyzing top errors in `system.errors`.
+///
+/// Streams error entries grouped by error code and prints top recurring errors.
+pub async fn top_errors(
     client: client::Client,
     req: model::TopErrorsRequest,
 ) -> Result<(), String> {
@@ -42,7 +67,14 @@ pub async fn handle_top_errors(
     Ok(())
 }
 
-pub async fn handle_context(
+/// Handles the `context` CLI command.
+///
+/// This command is a wrapper around the [`mod@context`] module, providing access to
+/// ClickHouse profile management via subcommands like `list`, `current`, `show`, and `set`.
+///
+/// It handles reading, modifying, and securely storing connection profiles defined
+/// in a TOML configuration file.
+pub async fn context(
     ctx: &mut context::Context,
     command: &cli::ContextCommand,
     out: model::OutputFormat,

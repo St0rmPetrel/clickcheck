@@ -1,18 +1,52 @@
+//! ClickHouse client abstraction with streaming and filtering support.
+//!
+//! This module defines the [`Client`] struct, which wraps multiple ClickHouse nodes
+//! and provides methods to stream query logs and error metrics based on user-defined filters.
+//!
+//! ## Responsibilities
+//! - Connecting to ClickHouse nodes securely or with relaxed TLS.
+//! - Executing queries concurrently across multiple nodes.
+//! - Building dynamic SQL queries from filter parameters.
+//! - Sending results through async channels.
+//!
+//! ## Key Types
+//! - [`Client`] — Manages ClickHouse node connections and runs filtered queries.
+//! - [`Config`] — Holds credentials and configuration for instantiating [`Client`].
+//! - [`ClientError`] — Defines errors returned from client operations.
+//!
+//! ## Supported Operations
+//! - [`Client::stream_logs_by_fingerprint`] — Streams normalized query log summaries.
+//! - [`Client::stream_error_by_code`] — Streams frequent ClickHouse errors grouped by code.
+//!
+//! ## Filtering
+//! Query filtering is handled internally and supports filtering query logs and system errors.
+//!
+//! ## TLS
+//! If `danger_accept_invalid_certs` is true in [`Config`], the client will
+//! accept invalid or self-signed certificates (intended for dev/test environments).
+//!
+//! ## Notes
+//! - Uses custom impact score formulas (I/O, CPU, memory, time) to rank query logs.
+//! - Designed for async environments using [`tokio`] and channels.
+//! - Includes fallbacks for secure and insecure HTTP client construction.
+//!
+//! This module forms the core data access layer for ClickHouse-backed analytics.
+
 mod filter;
 
 use crate::model::{Error, QueryLog};
-use clickhouse::{Client as ChClient, Row, error::Error as ChError, query::Query as ChQuery};
+use clickhouse::{error::Error as ChError, query::Query as ChQuery, Client as ChClient, Row};
 use filter::{ErrorFilter, QueryLogFilter};
 use futures::future::try_join_all;
 use hyper_tls::native_tls;
-use hyper_util::client::legacy::Client as HyperClient;
 use hyper_util::client::legacy::connect::HttpConnector;
+use hyper_util::client::legacy::Client as HyperClient;
 use hyper_util::rt::TokioExecutor;
 use secrecy::ExposeSecret;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 use thiserror::Error;
-use tokio::sync::mpsc::{Sender, error::SendError};
+use tokio::sync::mpsc::{error::SendError, Sender};
 
 // Константы для конфигурации HTTP клиента
 const TCP_KEEPALIVE: Duration = Duration::from_secs(60);
@@ -72,6 +106,15 @@ fn from_insecure_hyper_client() -> Result<ChClient, ClientError> {
 }
 
 impl Client {
+    /// Creates a new `Client` instance that connects to the provided ClickHouse nodes.
+    ///
+    /// # Arguments
+    ///
+    /// * `cfg` - Configuration with URLs, credentials, and TLS settings.
+    ///
+    /// # Errors
+    ///
+    /// Returns `ClientError` if initialization fails, including problems with TLS or URL handling.
     pub fn new(cfg: Config) -> Result<Self, ClientError> {
         let nodes = cfg
             .urls
@@ -123,6 +166,22 @@ impl Client {
         Ok(())
     }
 
+    /// Streams grouped query log data matching the specified filter, grouped by fingerprint (`normalized_query_hash`).
+    ///
+    /// Useful for identifying query patterns and their cumulative impact across the system.
+    ///
+    /// # Arguments
+    ///
+    /// * `filter` - Filter criteria (time range, user, etc.).
+    /// * `sender` - A `Sender<QueryLog>` to push results into a stream or channel.
+    ///
+    /// # Errors
+    ///
+    /// Returns `ClientError` if the query fails, parsing fails, or sending on the channel fails.
+    ///
+    /// # ClickHouse schema dependency
+    ///
+    /// This relies on the `system.query_log` table and expects ClickHouse to be configured to log queries.
     pub async fn stream_logs_by_fingerprint(
         &self,
         filter: QueryLogFilter,
@@ -163,6 +222,22 @@ impl Client {
         .await
     }
 
+    /// Streams error statistics from ClickHouse's `system.errors` table based on the provided filter.
+    ///
+    /// Useful for monitoring the frequency and severity of runtime errors by error code.
+    ///
+    /// # Arguments
+    ///
+    /// * `filter` - Filter criteria (e.g. time range, minimum count).
+    /// * `sender` - A `Sender<Error>` to stream the results.
+    ///
+    /// # Errors
+    ///
+    /// Returns `ClientError` for query or channel failures.
+    ///
+    /// # ClickHouse schema dependency
+    ///
+    /// Requires that `system.errors` is populated (i.e., error collection is enabled in ClickHouse).
     pub async fn stream_error_by_code(
         &self,
         filter: ErrorFilter,

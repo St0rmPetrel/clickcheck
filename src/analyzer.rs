@@ -1,3 +1,4 @@
+//! Analyzes ClickHouse query and error logs streamed via channels.
 use crate::model::{Error, QueriesSortBy, QueryLog};
 use std::collections::HashMap;
 use tokio::sync::mpsc::Receiver;
@@ -7,6 +8,21 @@ struct Analyzer {
     errors: HashMap<i32, Error>,
 }
 
+/// Aggregates ClickHouse queries from a stream and returns the top entries.
+///
+/// This function receives a stream of [`QueryLog`] records via a channel and
+/// groups them by their `normalized_query_hash`. It then sorts and returns
+/// the top `limit` queries based on the specified [`QueriesSortBy`] criteria.
+///
+/// # Arguments
+///
+/// - `receiver`: An asynchronous receiver stream of [`QueryLog`] entries.
+/// - `limit`: The number of top queries to return.
+/// - `sort_by`: Metric to rank the queries by (e.g. impact, I/O, duration).
+///
+/// # Returns
+///
+/// A `Vec<QueryLog>` containing the top `limit` queries.
 pub async fn top_queries(
     receiver: Receiver<QueryLog>,
     limit: usize,
@@ -19,6 +35,20 @@ pub async fn top_queries(
     analyzer.top_queries(limit, sort_by)
 }
 
+/// Aggregates ClickHouse error logs from a stream and returns the top entries.
+///
+/// This function receives a stream of [`Error`] records via a channel and
+/// groups them by error code. It returns the top `limit` error types sorted
+/// by their frequency (and then by code).
+///
+/// # Arguments
+///
+/// - `receiver`: An asynchronous receiver stream of [`Error`] entries.
+/// - `limit`: The number of top errors to return.
+///
+/// # Returns
+///
+/// A `Vec<Error>` containing the top `limit` errors.
 pub async fn top_errors(receiver: Receiver<Error>, limit: usize) -> Vec<Error> {
     let mut analyzer = Analyzer::new();
 

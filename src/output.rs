@@ -1,3 +1,6 @@
+//! Handles output formatting and printing for different data types in the CLI.
+//!
+//! Supports output formats: plain text (human-readable), JSON, and YAML.
 use crate::model::{Error, OutputFormat as Format, PrintableContextProfile, QueryLog};
 use serde::Serialize;
 
@@ -24,6 +27,10 @@ fn serialize_and_print<T: Serialize + ?Sized>(data: &T, format: Format, data_des
     }
 }
 
+/// Prints the top heaviest queries in the selected output format.
+///
+/// - `queries`: A slice of query logs, typically sorted by weight.
+/// - `format`: Output format (Text, JSON, or YAML).
 pub fn print_top_queries(queries: &[QueryLog], format: Format) {
     match format {
         Format::Text => text::print_weighted_queries_table(queries),
@@ -31,6 +38,10 @@ pub fn print_top_queries(queries: &[QueryLog], format: Format) {
     }
 }
 
+/// Prints the most frequent errors observed in `system.errors`.
+///
+/// - `errors`: A slice of aggregated errors.
+/// - `format`: Output format (Text, JSON, or YAML).
 pub fn print_top_errors(errors: &[Error], format: Format) {
     match format {
         Format::Text => text::print_errors_table(errors),
@@ -38,7 +49,10 @@ pub fn print_top_errors(errors: &[Error], format: Format) {
     }
 }
 
-/// Print a list of context profile names in the chosen format.
+/// Prints a list of available context profile names.
+///
+/// - `names`: Slice of context profile names.
+/// - `format`: Output format (Text, JSON, or YAML).
 pub fn print_context_list(names: &[String], format: Format) {
     match format {
         Format::Text => text::print_context_names_table(names),
@@ -53,7 +67,10 @@ pub fn print_context_list(names: &[String], format: Format) {
     }
 }
 
-/// Print the active (or default) context name, or a message if none is set.
+/// Prints the name of the currently active context profile, or an empty message if none is set.
+///
+/// - `active`: Name of the active profile, or `None`.
+/// - `format`: Output format (Text, JSON, or YAML).
 pub fn print_context_current(active: Option<&str>, format: Format) {
     match format {
         Format::Text => text::print_context_current(active),
@@ -68,6 +85,10 @@ pub fn print_context_current(active: Option<&str>, format: Format) {
     }
 }
 
+/// Prints the file path to the context configuration.
+///
+/// - `path`: Path to the `config.toml`.
+/// - `format`: Output format (Text, JSON, or YAML).
 pub fn print_context_config_path(path: &std::path::PathBuf, format: Format) {
     match format {
         Format::Text => text::print_context_config_path(path),
@@ -84,6 +105,10 @@ pub fn print_context_config_path(path: &std::path::PathBuf, format: Format) {
     }
 }
 
+/// Prints a detailed description of a single context profile.
+///
+/// - `profile`: The profile to print
+/// - `format`: Output format (Text, JSON, or YAML).
 pub fn print_context_profile(profile: &PrintableContextProfile, format: Format) {
     match format {
         Format::Text => text::print_context_profile(profile),

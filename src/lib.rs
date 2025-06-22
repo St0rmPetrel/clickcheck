@@ -1,3 +1,6 @@
+#![doc = include_str!("../README.md")]
+//! See [`command`] for available CLI commands.
+
 pub mod analyzer;
 pub mod cli;
 pub mod client;
@@ -29,7 +32,7 @@ pub async fn run() -> Result<(), String> {
                 danger_accept_invalid_certs: profile.accept_invalid_certificate,
             })
             .map_err(|e| format!("create clickhouse client error: {e}"))?;
-            command::handle_top_queries(
+            command::top_queries(
                 client,
                 model::TopQueriesRequest {
                     sort_by: sort_by.clone(),
@@ -55,7 +58,7 @@ pub async fn run() -> Result<(), String> {
                 danger_accept_invalid_certs: profile.accept_invalid_certificate,
             })
             .map_err(|e| format!("create clickhouse client error: {e}"))?;
-            command::handle_top_errors(
+            command::top_errors(
                 client,
                 model::TopErrorsRequest {
                     limit: limit.clone(),
@@ -69,7 +72,7 @@ pub async fn run() -> Result<(), String> {
             let mut ctx =
                 context::Context::new(cli_args.config.as_ref(), cli_args.context.as_deref())
                     .map_err(|e| format!("context error: {e}"))?;
-            command::handle_context(&mut ctx, command, cli_args.out).await?
+            command::context(&mut ctx, command, cli_args.out).await?
         }
     }
 
