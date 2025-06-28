@@ -77,6 +77,8 @@ impl Analyzer {
                 existing.total_memory_usage += log.total_memory_usage;
                 existing.total_user_time_us += log.total_user_time_us;
                 existing.total_system_time_us += log.total_system_time_us;
+                existing.total_network_send_bytes += log.total_network_send_bytes;
+                existing.total_network_receive_bytes += log.total_network_receive_bytes;
 
                 // Time bounds
                 existing.max_event_time = existing.max_event_time.max(log.max_event_time);
@@ -99,6 +101,7 @@ impl Analyzer {
                 existing.cpu_impact += log.cpu_impact;
                 existing.memory_impact += log.memory_impact;
                 existing.time_impact += log.time_impact;
+                existing.network_impact += log.network_impact;
                 existing.total_impact += log.total_impact;
             })
             .or_insert(log);
@@ -138,13 +141,7 @@ impl Analyzer {
                 QueriesSortBy::CPUImpact => q.cpu_impact,
                 QueriesSortBy::MemoryImpact => q.memory_impact,
                 QueriesSortBy::TimeImpact => q.time_impact,
-                QueriesSortBy::CpuTime => q.total_system_time_us + q.total_system_time_us,
-                QueriesSortBy::QueryDuration => q.total_query_duration_ms,
-                QueriesSortBy::ReadRows => q.total_read_rows,
-                QueriesSortBy::ReadBytes => q.total_read_bytes,
-                QueriesSortBy::MemoryUsage => q.total_memory_usage,
-                QueriesSortBy::UserTime => q.total_user_time_us,
-                QueriesSortBy::SystemTime => q.total_system_time_us,
+                QueriesSortBy::NetworkImpact => q.network_impact,
             })
         });
         top_queries.truncate(limit);

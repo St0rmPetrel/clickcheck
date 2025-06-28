@@ -23,15 +23,18 @@ pub struct QueryLog {
     pub total_memory_usage: u64,
     pub total_user_time_us: u64,
     pub total_system_time_us: u64,
+    pub total_network_receive_bytes: u64,
+    pub total_network_send_bytes: u64,
     pub users: Vec<String>,
     pub databases: Vec<String>,
     pub tables: Vec<String>,
     // Композитные показатели
-    pub io_impact: u64,     // Специализированный I/O вес
-    pub cpu_impact: u64,    // Специализированный CPU вес
-    pub memory_impact: u64, // Специализированный memory вес
-    pub time_impact: u64,   // Специализированный latency вес
-    pub total_impact: u64,  // Основной агрегированный показатель
+    pub io_impact: u64,      // Специализированный I/O вес
+    pub network_impact: u64, // Специализированный Network вес
+    pub cpu_impact: u64,     // Специализированный CPU вес
+    pub memory_impact: u64,  // Специализированный memory вес
+    pub time_impact: u64,    // Специализированный latency вес
+    pub total_impact: u64,   // Основной агрегированный показатель
 }
 
 #[derive(Debug, Clone, ValueEnum)]
@@ -48,13 +51,7 @@ pub enum QueriesSortBy {
     CPUImpact,
     MemoryImpact,
     TimeImpact,
-    CpuTime,
-    QueryDuration,
-    ReadRows,
-    ReadBytes,
-    MemoryUsage,
-    UserTime,
-    SystemTime,
+    NetworkImpact,
 }
 
 #[derive(Debug)]

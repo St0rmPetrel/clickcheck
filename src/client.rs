@@ -201,15 +201,18 @@ impl Client {
                sum(memory_usage) AS total_memory_usage,
                sum(ProfileEvents['UserTimeMicroseconds']) AS total_user_time_us,
                sum(ProfileEvents['SystemTimeMicroseconds']) AS total_system_time_us,
+               sum(ProfileEvents['NetworkReceiveBytes']) AS total_network_receive_bytes,
+               sum(ProfileEvents['NetworkSendBytes']) AS total_network_send_bytes,
                groupUniqArray(user) AS users,
                arrayDistinct(arrayFlatten(groupArray(databases))) AS databases,
                arrayDistinct(arrayFlatten(groupArray(tables))) AS tables,
 
                total_read_rows * 100 + total_read_bytes * 1 AS io_impact,
+               total_network_receive_bytes * 10 + total_network_send_bytes * 10 AS network_impact,
                total_user_time_us * 10_000 + total_system_time_us * 10_000 AS cpu_impact,
                total_memory_usage * 10 AS memory_impact,
                total_query_duration_ms * 1_000_000 AS time_impact,
-               io_impact + cpu_impact + memory_impact + time_impact AS total_impact
+               io_impact + network_impact + cpu_impact + memory_impact + time_impact AS total_impact
             FROM query_log
             WHERE type != 'QueryStart' AND query_kind = 'Select' {where_clause}
             GROUP BY normalized_query_hash

@@ -1,6 +1,6 @@
 use crate::model;
 use ascii_table::AsciiTable;
-use humansize::{DECIMAL, format_size};
+use humansize::{format_size, DECIMAL};
 use time::format_description::well_known::Rfc3339;
 
 const MAX_COLUMN_LEN: usize = 50;
@@ -35,12 +35,14 @@ pub fn print_weighted_queries_table(logs: &[model::QueryLog]) {
     table.column(4).set_header("CPU Impact");
     table.column(5).set_header("Memory Impact");
     table.column(6).set_header("Time Impact");
+    table.column(7).set_header("Network Impact");
 
     let data: Vec<_> = logs
         .iter()
         .map(|l| {
             let hash = format!("{:#x}", l.normalized_query_hash);
             let io_impact: String = format_size(l.io_impact, DECIMAL);
+            let network_impact: String = format_size(l.network_impact, DECIMAL);
             let cpu_impact: String = format_size(l.cpu_impact, DECIMAL);
             let memory_impact: String = format_size(l.memory_impact, DECIMAL);
             let time_impact: String = format_size(l.time_impact, DECIMAL);
@@ -54,6 +56,7 @@ pub fn print_weighted_queries_table(logs: &[model::QueryLog]) {
                 cpu_impact,
                 memory_impact,
                 time_impact,
+                network_impact,
             ]
         })
         .collect();
