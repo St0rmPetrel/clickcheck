@@ -139,6 +139,22 @@ impl Context {
         Ok(())
     }
 
+    /// Delete a profile with the given name.
+    ///
+    /// Writes the config to disk after setting.
+    pub fn delete_profile(&mut self, name: &str) -> Result<(), ContextError> {
+        if !self.config.profiles.contains_key(name) {
+            return Err(ContextError::ProfileNotFound(name.to_string()));
+        }
+
+        self.delete_password(name)?;
+
+        self.config.profiles.remove(name);
+        self.write_to_file()?;
+
+        Ok(())
+    }
+
     /// Sets the given profile as the default (used if no `--context` is provided).
     ///
     /// Returns an error if the profile does not exist.
@@ -198,6 +214,12 @@ impl Context {
     ) -> Result<(), ContextError> {
         let entry = keyring::Entry::new(SERVICE_NAME, profile_name)?;
         entry.set_password(password.expose_secret())?;
+        Ok(())
+    }
+
+    fn delete_password(&self, profile_name: &str) -> Result<(), ContextError> {
+        let entry = keyring::Entry::new(SERVICE_NAME, profile_name)?;
+        entry.delete_credential()?;
         Ok(())
     }
 

@@ -103,6 +103,10 @@ pub async fn context(
             output::print_context_profile(&printable, out);
         }
 
+        cli::ContextCommand::Delete { name } => ctx
+            .delete_profile(name)
+            .map_err(|e| format!("delete profile error: {e}"))?,
+
         cli::ContextCommand::Set { command } => match command {
             cli::ContextSetCommand::Current { name } => {
                 ctx.set_default(name)

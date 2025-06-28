@@ -202,11 +202,13 @@ pub enum ContextCommand {
         #[arg(long, default_value = "false")]
         show_secrets: bool,
     },
-    /// Commands to modify context profiles
+    /// Commands to add or modify context profiles
     Set {
         #[command(subcommand)]
         command: ContextSetCommand,
     },
+    /// Commands to delete context profiles
+    Delete { name: String },
 }
 
 /// Subcommands to set context values (profile definition or current profile).
