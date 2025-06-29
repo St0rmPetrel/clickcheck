@@ -131,25 +131,6 @@ impl Analyzer {
         self.queries
             .entry(log.normalized_query_hash)
             .and_modify(|existing| {
-                // Базовые метрики (raw values)
-                existing.total_query_duration_ms += log.total_query_duration_ms;
-                existing.total_read_rows += log.total_read_rows;
-                existing.total_read_bytes += log.total_read_bytes;
-                existing.total_memory_usage += log.total_memory_usage;
-                existing.total_user_time_us += log.total_user_time_us;
-                existing.total_system_time_us += log.total_system_time_us;
-                existing.total_network_send_bytes += log.total_network_send_bytes;
-                existing.total_network_receive_bytes += log.total_network_receive_bytes;
-
-                // Time bounds
-                existing.max_event_time = existing.max_event_time.max(log.max_event_time);
-                existing.min_event_time = existing.min_event_time.min(log.min_event_time);
-
-                merge_string_vecs(&mut existing.users, &log.users);
-                merge_string_vecs(&mut existing.databases, &log.databases);
-                merge_string_vecs(&mut existing.tables, &log.tables);
-
-                // Композитные показатели
                 existing.io_impact += log.io_impact;
                 existing.cpu_impact += log.cpu_impact;
                 existing.memory_impact += log.memory_impact;

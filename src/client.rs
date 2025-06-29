@@ -190,11 +190,7 @@ impl Client {
         let (where_clause, where_params) = filter.build_where();
         let sql = format!(
             r#"
-            SELECT
-               normalized_query_hash,
-               any(query) AS query,
-               max(event_time) AS max_event_time,
-               min(event_time) AS min_event_time,
+            WITH
                sum(query_duration_ms) AS total_query_duration_ms,
                sum(read_rows) AS total_read_rows,
                sum(read_bytes) AS total_read_bytes,
@@ -202,11 +198,10 @@ impl Client {
                sum(ProfileEvents['UserTimeMicroseconds']) AS total_user_time_us,
                sum(ProfileEvents['SystemTimeMicroseconds']) AS total_system_time_us,
                sum(ProfileEvents['NetworkReceiveBytes']) AS total_network_receive_bytes,
-               sum(ProfileEvents['NetworkSendBytes']) AS total_network_send_bytes,
-               groupUniqArray(user) AS users,
-               arrayDistinct(arrayFlatten(groupArray(databases))) AS databases,
-               arrayDistinct(arrayFlatten(groupArray(tables))) AS tables,
-
+               sum(ProfileEvents['NetworkSendBytes']) AS total_network_send_bytes
+            SELECT
+               normalized_query_hash,
+               any(query) AS query,
                total_read_rows * 100 + total_read_bytes * 1 AS io_impact,
                total_network_receive_bytes * 10 + total_network_send_bytes * 10 AS network_impact,
                total_user_time_us * 10_000 + total_system_time_us * 10_000 AS cpu_impact,

@@ -5,16 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.3.0] - 2025-06-29
 
 ### Added
 - `context delete <PROFILE_NAME>` command to delete context profile.
-- `Network Impact` for `queries` command.
-- `total` command which calculate total weights by filters.
-- `inspect <FINGERPRINT>` command which show detail metrics information about query group.
+- `total` command calculate total weights by filters.
+- `inspect <FINGERPRINT>` command show detail metrics information about query group.
 
 ### Deprecated
-- Remove ability sort by non impact columns in queries command.
+- Remove non impact fields from `queries` command.
 
 ## [0.2.1] - 2025-06-22
 
