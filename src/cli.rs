@@ -80,6 +80,22 @@ pub enum Command {
         filter: QueriesFilterArgs,
     },
 
+    /// Inspect a single query fingerprint with detailed info.
+    ///
+    /// This command streams all log entries matching the specified query fingerprint,
+    /// applying optional filters such as time ranges or users. It provides a detailed
+    /// view of the query's resource usage, execution times, affected tables, and more.
+    Inspect {
+        #[clap(flatten)]
+        conn: ConnectArgs,
+
+        #[arg(value_parser = parse_hex)]
+        fingerprint: u64,
+
+        #[clap(flatten)]
+        filter: QueriesFilterArgs,
+    },
+
     /// Show top ClickHouse query errors with filtering options.
     Errors {
         #[clap(flatten)]
@@ -286,4 +302,9 @@ fn parse_datetime(s: &str) -> Result<OffsetDateTime, String> {
 /// Used to avoid leaking secrets in logs or stack traces.
 fn parse_secret_arg(s: &str) -> Result<secrecy::SecretString, String> {
     Ok(secrecy::SecretString::new(s.to_string().into()))
+}
+
+fn parse_hex(s: &str) -> Result<u64, String> {
+    u64::from_str_radix(s.trim_start_matches("0x"), 16)
+        .map_err(|e| format!("Invalid hex value: {}", e))
 }

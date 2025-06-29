@@ -9,6 +9,28 @@ use time::OffsetDateTime;
 use crate::cli;
 
 #[derive(Row, Serialize, Deserialize, Debug, Clone)]
+pub struct QueryLogExtended {
+    // Базовые метрики (raw values)
+    pub normalized_query_hash: u64,
+    pub query: String,
+    #[serde(with = "clickhouse::serde::time::datetime")]
+    pub max_event_time: OffsetDateTime,
+    #[serde(with = "clickhouse::serde::time::datetime")]
+    pub min_event_time: OffsetDateTime,
+    pub total_query_duration_ms: u64,
+    pub total_read_rows: u64,
+    pub total_read_bytes: u64,
+    pub total_memory_usage: u64,
+    pub total_user_time_us: u64,
+    pub total_system_time_us: u64,
+    pub total_network_receive_bytes: u64,
+    pub total_network_send_bytes: u64,
+    pub users: Vec<String>,
+    pub databases: Vec<String>,
+    pub tables: Vec<String>,
+}
+
+#[derive(Row, Serialize, Deserialize, Debug, Clone)]
 pub struct QueryLog {
     // Базовые метрики (raw values)
     pub normalized_query_hash: u64,
@@ -89,6 +111,13 @@ pub struct TopQueriesRequest {
 
 #[derive(Debug)]
 pub struct TotalQueriesRequest {
+    pub filter: QueriesFilter,
+    pub out: OutputFormat,
+}
+
+#[derive(Debug)]
+pub struct InspectFingerprintRequest {
+    pub fingerprint: u64,
     pub filter: QueriesFilter,
     pub out: OutputFormat,
 }

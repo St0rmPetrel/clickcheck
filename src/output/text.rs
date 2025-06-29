@@ -1,6 +1,7 @@
 use crate::model;
 use ascii_table::AsciiTable;
 use humansize::{format_size, DECIMAL};
+use std::time::Duration;
 use time::format_description::well_known::Rfc3339;
 
 const MAX_COLUMN_LEN: usize = 50;
@@ -28,7 +29,7 @@ fn compact_str(s: &str, max_len: usize) -> String {
 /// showing only the most important columns.
 pub fn print_weighted_queries_table(logs: &[model::QueryLog]) {
     let mut table = AsciiTable::default();
-    table.column(0).set_header("Hash");
+    table.column(0).set_header("Fingerprint");
     table.column(1).set_header("Query");
     table.column(2).set_header("Total Impact");
     table.column(3).set_header("IO Impact");
@@ -61,6 +62,39 @@ pub fn print_weighted_queries_table(logs: &[model::QueryLog]) {
         })
         .collect();
     table.print(data);
+}
+
+/// Print [`model::QueryLogExtended`] in human readable format.
+pub fn print_query_extended(query: &model::QueryLogExtended) {
+    let hash = format!("{:#x}", query.normalized_query_hash);
+    let total_duration =
+        humantime::format_duration(Duration::from_millis(query.total_query_duration_ms));
+    let read_bytes = format_size(query.total_read_bytes, DECIMAL);
+    let memory = format_size(query.total_memory_usage, DECIMAL);
+    let user_time = humantime::format_duration(Duration::from_micros(query.total_user_time_us));
+    let system_time = humantime::format_duration(Duration::from_micros(query.total_system_time_us));
+    let net_recv = format_size(query.total_network_receive_bytes, DECIMAL);
+    let net_send = format_size(query.total_network_send_bytes, DECIMAL);
+
+    println!("Query fingerprint: {}", hash);
+    println!("Query text:\n{}", query.query);
+    println!(
+        "Events time range: {} - {}",
+        query.min_event_time.format(&Rfc3339).unwrap_or_default(),
+        query.max_event_time.format(&Rfc3339).unwrap_or_default()
+    );
+    println!("Total duration: {}", total_duration);
+    println!("Read rows: {}", query.total_read_rows);
+    println!("Read bytes: {}", read_bytes);
+    println!("Memory usage: {}", memory);
+    println!("User CPU time: {}", user_time);
+    println!("System CPU time: {}", system_time);
+    println!("Network received: {}", net_recv);
+    println!("Network sent: {}", net_send);
+
+    println!("Users: {}", query.users.join(", "));
+    println!("Databases: {}", query.databases.join(", "));
+    println!("Tables: {}", query.tables.join(", "));
 }
 
 /// Print a slice of [`model::QueryLogTotal`] in an ASCII table.

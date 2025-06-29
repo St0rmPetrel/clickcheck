@@ -2,8 +2,6 @@
 
 ## В разработке и планах
 
-- “Get” Subcommands on queries
-  - `clickcheck queries get <FINGERPRINT>`
 - Advanced Analysis Modes
   - **Unstable queries**: high-variance detection
   - **Burst detection**: spikes in query frequency

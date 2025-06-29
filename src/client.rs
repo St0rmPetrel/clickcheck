@@ -34,7 +34,7 @@
 
 mod filter;
 
-use crate::model::{Error, QueryLog, QueryLogTotal};
+use crate::model::{Error, QueryLog, QueryLogExtended, QueryLogTotal};
 use clickhouse::{error::Error as ChError, query::Query as ChQuery, Client as ChClient, Row};
 use filter::{ErrorFilter, QueryLogFilter};
 use futures::future::try_join_all;
@@ -215,6 +215,66 @@ impl Client {
                io_impact + network_impact + cpu_impact + memory_impact + time_impact AS total_impact
             FROM query_log
             WHERE type != 'QueryStart' AND query_kind = 'Select' {where_clause}
+            GROUP BY normalized_query_hash
+            "#,
+        );
+
+        self.execute_on_all_nodes(sender, move |node| {
+            build_query_with_params(node, &sql, &where_params)
+        })
+        .await
+    }
+
+    /// Retrieves detailed query log metrics for a specific query fingerprint.
+    ///
+    /// This method is intended for drill-down analysis of a known query fingerprint
+    /// (`normalized_query_hash`). Unlike [`Self::stream_logs_by_fingerprint`],
+    /// which aggregates metrics across *all* fingerprints, this function focuses on a
+    /// single query group, providing extended information.
+    ///
+    /// # Arguments
+    ///
+    /// * `fingerprint` — The `normalized_query_hash` of the query group to inspect.
+    /// * `filter` — Optional additional filtering (e.g., time range, user).
+    /// * `sender` — A `Sender<QueryLogExtended>` to stream the result.
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(())` — If the query completed successfully.
+    /// * `Err(ClientError)` — On ClickHouse query failure or channel send error.
+    ///
+    /// # ClickHouse schema dependency
+    ///
+    /// Relies on the `system.query_log` table and assumes it includes normalized query hashes.
+    pub async fn stream_log_by_fingerprint(
+        &self,
+        fingerprint: u64,
+        filter: QueryLogFilter,
+        sender: Sender<QueryLogExtended>,
+    ) -> Result<(), ClientError> {
+        let (where_clause, where_params) = filter.build_where();
+
+        let sql = format!(
+            r#"
+            SELECT
+               normalized_query_hash,
+               any(query) AS query,
+               max(event_time) AS max_event_time,
+               min(event_time) AS min_event_time,
+               sum(query_duration_ms) AS total_query_duration_ms,
+               sum(read_rows) AS total_read_rows,
+               sum(read_bytes) AS total_read_bytes,
+               sum(memory_usage) AS total_memory_usage,
+               sum(ProfileEvents['UserTimeMicroseconds']) AS total_user_time_us,
+               sum(ProfileEvents['SystemTimeMicroseconds']) AS total_system_time_us,
+               sum(ProfileEvents['NetworkReceiveBytes']) AS total_network_receive_bytes,
+               sum(ProfileEvents['NetworkSendBytes']) AS total_network_send_bytes,
+               groupUniqArray(user) AS users,
+               arrayDistinct(arrayFlatten(groupArray(databases))) AS databases,
+               arrayDistinct(arrayFlatten(groupArray(tables))) AS tables
+            FROM query_log
+            WHERE type != 'QueryStart' AND query_kind = 'Select'
+              AND normalized_query_hash = {fingerprint} {where_clause}
             GROUP BY normalized_query_hash
             "#,
         );

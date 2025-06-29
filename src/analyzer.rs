@@ -1,11 +1,12 @@
 //! Analyzes ClickHouse query and error logs streamed via channels.
-use crate::model::{Error, QueriesSortBy, QueryLog, QueryLogTotal};
+use crate::model::{Error, QueriesSortBy, QueryLog, QueryLogExtended, QueryLogTotal};
 use std::collections::HashMap;
 use tokio::sync::mpsc::Receiver;
 
 struct Analyzer {
     total_queries: QueryLogTotal,
     queries: HashMap<u64, QueryLog>,
+    query_extended: Option<QueryLogExtended>,
     errors: HashMap<i32, Error>,
 }
 
@@ -34,6 +35,31 @@ pub async fn top_queries(
     analyzer.collect_logs(receiver).await;
 
     analyzer.top_queries(limit, sort_by)
+}
+
+/// Aggregates extended ClickHouse query metrics for a single fingerprint.
+///
+/// This function receives a stream of [`QueryLogExtended`] entries, all of which
+/// are expected to correspond to the same `normalized_query_hash`.
+/// These entries may come from multiple ClickHouse nodes.
+///
+/// It merges all metrics (e.g., I/O, memory, CPU usage, user time, etc.) into a single
+/// [`QueryLogExtended`] summary, combining scalar values and deduplicating string fields.
+///
+/// # Arguments
+///
+/// - `receiver`: An asynchronous channel receiving [`QueryLogExtended`] entries.
+///
+/// # Returns
+///
+/// A single [`QueryLogExtended`] representing the aggregated metrics,
+/// or `None` if no entries were received.
+pub async fn extended_query(receiver: Receiver<QueryLogExtended>) -> Option<QueryLogExtended> {
+    let mut analyzer = Analyzer::new();
+
+    analyzer.collect_logs_extended(receiver).await;
+
+    analyzer.query_extended
 }
 
 /// Aggregates total ClickHouse query metrics from a stream.
@@ -85,6 +111,7 @@ impl Analyzer {
         Self {
             total_queries: QueryLogTotal::default(),
             queries: HashMap::new(),
+            query_extended: None,
             errors: HashMap::new(),
         }
     }
@@ -133,6 +160,33 @@ impl Analyzer {
             .or_insert(log);
     }
 
+    fn merge_query_extended(&mut self, log: QueryLogExtended) {
+        match &mut self.query_extended {
+            Some(existing) => {
+                // Базовые метрики (raw values)
+                existing.total_query_duration_ms += log.total_query_duration_ms;
+                existing.total_read_rows += log.total_read_rows;
+                existing.total_read_bytes += log.total_read_bytes;
+                existing.total_memory_usage += log.total_memory_usage;
+                existing.total_user_time_us += log.total_user_time_us;
+                existing.total_system_time_us += log.total_system_time_us;
+                existing.total_network_send_bytes += log.total_network_send_bytes;
+                existing.total_network_receive_bytes += log.total_network_receive_bytes;
+
+                // Time bounds
+                existing.max_event_time = existing.max_event_time.max(log.max_event_time);
+                existing.min_event_time = existing.min_event_time.min(log.min_event_time);
+
+                merge_string_vecs(&mut existing.users, &log.users);
+                merge_string_vecs(&mut existing.databases, &log.databases);
+                merge_string_vecs(&mut existing.tables, &log.tables);
+            }
+            None => {
+                self.query_extended = Some(log);
+            }
+        }
+    }
+
     fn merge_error(&mut self, err: Error) {
         self.errors
             .entry(err.code)
@@ -154,6 +208,12 @@ impl Analyzer {
     async fn collect_logs_total(&mut self, mut rx: Receiver<QueryLogTotal>) {
         while let Some(log) = rx.recv().await {
             self.merge_query_total(log);
+        }
+    }
+
+    async fn collect_logs_extended(&mut self, mut rx: Receiver<QueryLogExtended>) {
+        while let Some(log) = rx.recv().await {
+            self.merge_query_extended(log);
         }
     }
 

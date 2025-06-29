@@ -83,6 +83,48 @@ pub async fn total_queries(
     Ok(())
 }
 
+/// Executes the `inspect` command by analyzing detailed metrics for a single query fingerprint.
+///
+/// Streams detailed query log entries matching a given `normalized_query_hash` (fingerprint)
+/// across multiple ClickHouse nodes, aggregates them into a comprehensive [`model::QueryLogExtended`] report,
+/// and outputs the collected data.
+///
+/// # Workflow
+///
+/// - Starts a streaming task from the [`client`] to receive [`model::QueryLogExtended`] records.
+/// - Analyzes the incoming stream using [`analyzer::extended_query`].
+/// - Outputs the aggregated totals using [`output::print_query_extended`].
+///
+/// # Arguments
+///
+/// - `client`: Configured ClickHouse client used for streaming logs.
+/// - `req`: An [`model::InspectFingerprintRequest`] containing the fingerprint and optional filters.
+///
+/// # Returns
+///
+/// A `Result<(), String>` indicating success or a streaming/processing error.
+pub async fn inspect_fingerprint(
+    client: client::Client,
+    req: model::InspectFingerprintRequest,
+) -> Result<(), String> {
+    let (tx, rx) = mpsc::channel(128);
+    let analyzer_task = analyzer::extended_query(rx);
+
+    let stream_task = client.stream_log_by_fingerprint(req.fingerprint, req.filter.into(), tx);
+
+    let (stream_result, query_extended) = tokio::join!(stream_task, analyzer_task);
+
+    stream_result.map_err(|e| format!("Stream error: {e}"))?;
+
+    if let Some(query_extended) = query_extended {
+        output::print_query_extended(&query_extended, req.out);
+        Ok(())
+    } else {
+        let fingerprint = format!("{:#x}", req.fingerprint);
+        Err(format!("Fingerprint {fingerprint} not found"))
+    }
+}
+
 /// Executes the `errors` command by analyzing top errors in `system.errors`.
 ///
 /// Streams error entries grouped by error code and prints top recurring errors.

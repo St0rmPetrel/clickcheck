@@ -2,7 +2,8 @@
 //!
 //! Supports output formats: plain text (human-readable), JSON, and YAML.
 use crate::model::{
-    Error, OutputFormat as Format, PrintableContextProfile, QueryLog, QueryLogTotal,
+    Error, OutputFormat as Format, PrintableContextProfile, QueryLog, QueryLogExtended,
+    QueryLogTotal,
 };
 use serde::Serialize;
 
@@ -26,6 +27,13 @@ fn serialize_and_print<T: Serialize + ?Sized>(data: &T, format: Format, data_des
                 "Error: serialize_and_print called with Text format for {data_description}. This should be handled separately."
             );
         }
+    }
+}
+
+pub fn print_query_extended(query: &QueryLogExtended, format: Format) {
+    match format {
+        Format::Text => text::print_query_extended(query),
+        Format::Json | Format::Yaml => serialize_and_print(query, format, "top queries"),
     }
 }
 
