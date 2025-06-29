@@ -2,9 +2,8 @@
 
 ## В разработке и планах
 
-- “Get” & “Stats” Subcommands on queries
+- “Get” Subcommands on queries
   - `clickcheck queries get <FINGERPRINT>`
-  - `clickcheck queries stats`: Single aggregated query
 - Advanced Analysis Modes
   - **Unstable queries**: high-variance detection
   - **Burst detection**: spikes in query frequency

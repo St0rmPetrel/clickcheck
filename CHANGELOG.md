@@ -9,7 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - `context delete <PROFILE_NAME>` command to delete context profile.
-- Added `Network Impact` for `queries` command.
+- `Network Impact` for `queries` command.
+- `total` command which calculate total weights by filters.
 
 ### Deprecated
 - Remove ability sort by non impact columns in queries command.

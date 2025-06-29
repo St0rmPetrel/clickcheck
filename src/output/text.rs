@@ -24,7 +24,7 @@ fn compact_str(s: &str, max_len: usize) -> String {
     compact
 }
 
-/// Print a slice of `WeightedQueryLog` in an ASCII table,
+/// Print a slice of [`model::QueryLog`] in an ASCII table,
 /// showing only the most important columns.
 pub fn print_weighted_queries_table(logs: &[model::QueryLog]) {
     let mut table = AsciiTable::default();
@@ -63,7 +63,37 @@ pub fn print_weighted_queries_table(logs: &[model::QueryLog]) {
     table.print(data);
 }
 
-/// Print a slice of `Errors` in an ASCII table.
+/// Print a slice of [`model::QueryLogTotal`] in an ASCII table.
+pub fn print_total_queries_table(l: &model::QueryLogTotal) {
+    let mut table = AsciiTable::default();
+    table.column(0).set_header("Select count");
+    table.column(1).set_header("Total Impact");
+    table.column(2).set_header("IO Impact");
+    table.column(3).set_header("CPU Impact");
+    table.column(4).set_header("Memory Impact");
+    table.column(5).set_header("Time Impact");
+    table.column(6).set_header("Network Impact");
+
+    let network_impact: String = format_size(l.network_impact, DECIMAL);
+    let io_impact: String = format_size(l.io_impact, DECIMAL);
+    let cpu_impact: String = format_size(l.cpu_impact, DECIMAL);
+    let memory_impact: String = format_size(l.memory_impact, DECIMAL);
+    let time_impact: String = format_size(l.time_impact, DECIMAL);
+    let total_impact: String = format_size(l.total_impact, DECIMAL);
+
+    let data = vec![vec![
+        l.queries_count.to_string(),
+        total_impact,
+        io_impact,
+        cpu_impact,
+        memory_impact,
+        time_impact,
+        network_impact,
+    ]];
+    table.print(data);
+}
+
+/// Print a slice of [`model::Error`] in an ASCII table.
 pub fn print_errors_table(errs: &[model::Error]) {
     let mut table = AsciiTable::default();
     table.column(0).set_header("Code");

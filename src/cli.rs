@@ -68,6 +68,18 @@ pub enum Command {
         limit: usize,
     },
 
+    /// Analyze total number of queries and aggregated statistics (e.g. read rows/data) in a time range.
+    ///
+    /// This command shows cumulative metrics over the specified filter window,
+    /// helping track overall workload volume.
+    Total {
+        #[clap(flatten)]
+        conn: ConnectArgs,
+
+        #[clap(flatten)]
+        filter: QueriesFilterArgs,
+    },
+
     /// Show top ClickHouse query errors with filtering options.
     Errors {
         #[clap(flatten)]

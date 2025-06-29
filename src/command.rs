@@ -46,6 +46,43 @@ pub async fn top_queries(
     Ok(())
 }
 
+/// Executes the `total-queries` command by aggregating total metrics from `system.query_log`.
+///
+/// Streams pre-aggregated [`QueryLogTotal`] entries and summarizes overall resource usage,
+/// such as total I/O, CPU, memory, network, and time impact across all queries.
+///
+/// # Workflow
+///
+/// - Starts a streaming task from the [`client`] to receive [`model::QueryLogTotal`] records.
+/// - Analyzes the incoming stream using [`analyzer::total_queries`].
+/// - Outputs the aggregated totals using [`output::print_total_queries`].
+///
+/// # Arguments
+///
+/// - `client`: A configured ClickHouse client used to stream log data.
+/// - `req`: User request specifying filter criteria and output format.
+///
+/// # Returns
+///
+/// `Result<(), String>` indicating success or a streaming error.
+pub async fn total_queries(
+    client: client::Client,
+    req: model::TotalQueriesRequest,
+) -> Result<(), String> {
+    let (tx, rx) = mpsc::channel(128);
+    let analyzer_task = analyzer::total_queries(rx);
+
+    let stream_task = client.stream_logs_total(req.filter.into(), tx);
+
+    let (stream_result, total_queries) = tokio::join!(stream_task, analyzer_task);
+
+    stream_result.map_err(|e| format!("Stream error: {e}"))?;
+
+    output::print_total_queries(&total_queries, req.out);
+
+    Ok(())
+}
+
 /// Executes the `errors` command by analyzing top errors in `system.errors`.
 ///
 /// Streams error entries grouped by error code and prints top recurring errors.

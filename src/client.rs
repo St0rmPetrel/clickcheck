@@ -34,7 +34,7 @@
 
 mod filter;
 
-use crate::model::{Error, QueryLog};
+use crate::model::{Error, QueryLog, QueryLogTotal};
 use clickhouse::{error::Error as ChError, query::Query as ChQuery, Client as ChClient, Row};
 use filter::{ErrorFilter, QueryLogFilter};
 use futures::future::try_join_all;
@@ -216,6 +216,63 @@ impl Client {
             FROM query_log
             WHERE type != 'QueryStart' AND query_kind = 'Select' {where_clause}
             GROUP BY normalized_query_hash
+            "#,
+        );
+
+        self.execute_on_all_nodes(sender, move |node| {
+            build_query_with_params(node, &sql, &where_params)
+        })
+        .await
+    }
+
+    /// Streams total aggregated query log metrics matching the specified filter.
+    ///
+    /// Unlike [`Self::stream_logs_by_fingerprint`], this method does not group by query fingerprint.
+    /// Instead, it aggregates metrics across all matching `Select` queries within the `query_log`
+    /// for a given filter, returning a single total result.
+    ///
+    /// Useful for high-level monitoring of cluster-wide query impact over a period of time.
+    ///
+    /// # Arguments
+    ///
+    /// * `filter` - Filter criteria to restrict the aggregation scope (e.g., time range, user).
+    /// * `sender` - A `Sender<QueryLogTotal>` to deliver the aggregated result to consumers.
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(())` - If the aggregation completed successfully.
+    /// * `Err(ClientError)` - On query failure, data parsing issue, or channel send error.
+    ///
+    /// # ClickHouse schema dependency
+    ///
+    /// Relies on the `system.query_log` table with query profiling enabled.
+    pub async fn stream_logs_total(
+        &self,
+        filter: QueryLogFilter,
+        sender: Sender<QueryLogTotal>,
+    ) -> Result<(), ClientError> {
+        let (where_clause, where_params) = filter.build_where();
+        let sql = format!(
+            r#"
+            WITH
+               sum(query_duration_ms) AS total_query_duration_ms,
+               sum(read_rows) AS total_read_rows,
+               sum(read_bytes) AS total_read_bytes,
+               sum(memory_usage) AS total_memory_usage,
+               sum(ProfileEvents['UserTimeMicroseconds']) AS total_user_time_us,
+               sum(ProfileEvents['SystemTimeMicroseconds']) AS total_system_time_us,
+               sum(ProfileEvents['NetworkReceiveBytes']) AS total_network_receive_bytes,
+               sum(ProfileEvents['NetworkSendBytes']) AS total_network_send_bytes
+            SELECT
+               count() AS queries_count,
+               total_read_rows * 100 + total_read_bytes * 1 AS io_impact,
+               total_network_receive_bytes * 10 + total_network_send_bytes * 10 AS network_impact,
+               total_user_time_us * 10_000 + total_system_time_us * 10_000 AS cpu_impact,
+               total_memory_usage * 10 AS memory_impact,
+               total_query_duration_ms * 1_000_000 AS time_impact,
+               io_impact + network_impact + cpu_impact + memory_impact + time_impact AS total_impact
+            FROM query_log
+            WHERE type != 'QueryStart' AND query_kind = 'Select' {where_clause}
             "#,
         );
 

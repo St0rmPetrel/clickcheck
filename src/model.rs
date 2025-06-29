@@ -37,6 +37,18 @@ pub struct QueryLog {
     pub total_impact: u64,   // Основной агрегированный показатель
 }
 
+#[derive(Row, Serialize, Deserialize, Debug, Clone, Default)]
+pub struct QueryLogTotal {
+    pub queries_count: u64, // Количество Select запросов
+    // Композитные показатели
+    pub io_impact: u64,      // Специализированный I/O вес
+    pub network_impact: u64, // Специализированный Network вес
+    pub cpu_impact: u64,     // Специализированный CPU вес
+    pub memory_impact: u64,  // Специализированный memory вес
+    pub time_impact: u64,    // Специализированный latency вес
+    pub total_impact: u64,   // Основной агрегированный показатель
+}
+
 #[derive(Debug, Clone, ValueEnum)]
 pub enum OutputFormat {
     Json,
@@ -71,6 +83,12 @@ pub struct QueriesFilter {
 pub struct TopQueriesRequest {
     pub limit: usize,
     pub sort_by: QueriesSortBy,
+    pub filter: QueriesFilter,
+    pub out: OutputFormat,
+}
+
+#[derive(Debug)]
+pub struct TotalQueriesRequest {
     pub filter: QueriesFilter,
     pub out: OutputFormat,
 }

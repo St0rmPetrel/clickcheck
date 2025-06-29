@@ -1,7 +1,9 @@
 //! Handles output formatting and printing for different data types in the CLI.
 //!
 //! Supports output formats: plain text (human-readable), JSON, and YAML.
-use crate::model::{Error, OutputFormat as Format, PrintableContextProfile, QueryLog};
+use crate::model::{
+    Error, OutputFormat as Format, PrintableContextProfile, QueryLog, QueryLogTotal,
+};
 use serde::Serialize;
 
 mod text;
@@ -35,6 +37,17 @@ pub fn print_top_queries(queries: &[QueryLog], format: Format) {
     match format {
         Format::Text => text::print_weighted_queries_table(queries),
         Format::Json | Format::Yaml => serialize_and_print(queries, format, "top queries"),
+    }
+}
+
+/// Prints the total weights of queries aggregated over a period of time.
+///
+/// - `queries`: A reference to the total query statistics.
+/// - `format`: Output format (Text, JSON, or YAML).
+pub fn print_total_queries(queries: &QueryLogTotal, format: Format) {
+    match format {
+        Format::Text => text::print_total_queries_table(queries),
+        Format::Json | Format::Yaml => serialize_and_print(queries, format, "total queries"),
     }
 }
 

@@ -1,9 +1,10 @@
 //! Analyzes ClickHouse query and error logs streamed via channels.
-use crate::model::{Error, QueriesSortBy, QueryLog};
+use crate::model::{Error, QueriesSortBy, QueryLog, QueryLogTotal};
 use std::collections::HashMap;
 use tokio::sync::mpsc::Receiver;
 
 struct Analyzer {
+    total_queries: QueryLogTotal,
     queries: HashMap<u64, QueryLog>,
     errors: HashMap<i32, Error>,
 }
@@ -35,6 +36,27 @@ pub async fn top_queries(
     analyzer.top_queries(limit, sort_by)
 }
 
+/// Aggregates total ClickHouse query metrics from a stream.
+///
+/// This function receives a stream of [`QueryLogTotal`] records via a channel
+/// and accumulates them into a single [`QueryLogTotal`] summary. It's useful
+/// for computing overall resource usage and query volume across time.
+///
+/// # Arguments
+///
+/// - `receiver`: An asynchronous receiver stream of [`QueryLogTotal`] entries.
+///
+/// # Returns
+///
+/// A single [`QueryLogTotal`] struct representing the sum of all input metrics.
+pub async fn total_queries(receiver: Receiver<QueryLogTotal>) -> QueryLogTotal {
+    let mut analyzer = Analyzer::new();
+
+    analyzer.collect_logs_total(receiver).await;
+
+    analyzer.total_queries.clone()
+}
+
 /// Aggregates ClickHouse error logs from a stream and returns the top entries.
 ///
 /// This function receives a stream of [`Error`] records via a channel and
@@ -61,9 +83,21 @@ impl Analyzer {
     // Create a new Analyzer
     fn new() -> Self {
         Self {
+            total_queries: QueryLogTotal::default(),
             queries: HashMap::new(),
             errors: HashMap::new(),
         }
+    }
+
+    fn merge_query_total(&mut self, log: QueryLogTotal) {
+        self.total_queries.queries_count += log.queries_count;
+        // Композитные показатели
+        self.total_queries.io_impact += log.io_impact;
+        self.total_queries.cpu_impact += log.cpu_impact;
+        self.total_queries.memory_impact += log.memory_impact;
+        self.total_queries.time_impact += log.time_impact;
+        self.total_queries.network_impact += log.network_impact;
+        self.total_queries.total_impact += log.total_impact;
     }
 
     fn merge_query(&mut self, log: QueryLog) {
@@ -84,17 +118,9 @@ impl Analyzer {
                 existing.max_event_time = existing.max_event_time.max(log.max_event_time);
                 existing.min_event_time = existing.min_event_time.min(log.min_event_time);
 
-                existing.users.extend(log.users.iter().cloned());
-                existing.users.sort_unstable();
-                existing.users.dedup();
-
-                existing.databases.extend(log.databases.iter().cloned());
-                existing.databases.sort_unstable();
-                existing.databases.dedup();
-
-                existing.tables.extend(log.tables.iter().cloned());
-                existing.tables.sort_unstable();
-                existing.tables.dedup();
+                merge_string_vecs(&mut existing.users, &log.users);
+                merge_string_vecs(&mut existing.databases, &log.databases);
+                merge_string_vecs(&mut existing.tables, &log.tables);
 
                 // Композитные показатели
                 existing.io_impact += log.io_impact;
@@ -125,6 +151,12 @@ impl Analyzer {
         }
     }
 
+    async fn collect_logs_total(&mut self, mut rx: Receiver<QueryLogTotal>) {
+        while let Some(log) = rx.recv().await {
+            self.merge_query_total(log);
+        }
+    }
+
     async fn collect_errors(&mut self, mut rx: Receiver<Error>) {
         while let Some(err) = rx.recv().await {
             self.merge_error(err);
@@ -132,7 +164,7 @@ impl Analyzer {
     }
 
     fn top_queries(&self, limit: usize, sort_by: QueriesSortBy) -> Vec<QueryLog> {
-        let mut top_queries: Vec<_> = self.queries.clone().into_values().collect();
+        let mut top_queries: Vec<_> = self.queries.values().cloned().collect();
 
         top_queries.sort_by_key(|q| {
             std::cmp::Reverse(match sort_by {
@@ -149,7 +181,7 @@ impl Analyzer {
         top_queries
     }
 
-    fn top_errors(self, limit: usize) -> Vec<Error> {
+    fn top_errors(&self, limit: usize) -> Vec<Error> {
         let mut top_errors: Vec<Error> = self.errors.values().cloned().collect();
 
         top_errors.sort_by_key(|e| (std::cmp::Reverse(e.count), e.code));
@@ -157,4 +189,10 @@ impl Analyzer {
 
         top_errors
     }
+}
+
+fn merge_string_vecs(target: &mut Vec<String>, source: &[String]) {
+    target.extend_from_slice(source);
+    target.sort_unstable();
+    target.dedup();
 }

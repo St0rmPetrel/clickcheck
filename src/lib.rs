@@ -43,6 +43,26 @@ pub async fn run() -> Result<(), String> {
             )
             .await?
         }
+        Command::Total { conn, filter } => {
+            let ctx = context::Context::new(cli_args.config.as_ref(), cli_args.context.as_deref())
+                .map_err(|e| format!("context error: {e}"))?;
+            let profile = resolve_profile(&conn, &ctx)?;
+            let client = client::Client::new(client::Config {
+                urls: &profile.urls,
+                user: &profile.user,
+                password: &profile.password,
+                danger_accept_invalid_certs: profile.accept_invalid_certificate,
+            })
+            .map_err(|e| format!("create clickhouse client error: {e}"))?;
+            command::total_queries(
+                client,
+                model::TotalQueriesRequest {
+                    filter: filter.clone().into(),
+                    out: cli_args.out,
+                },
+            )
+            .await?
+        }
         Command::Errors {
             conn,
             filter,
